@@ -1,0 +1,40 @@
+# ─── Python / Streamlit App ────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+venv/
+.venv/
+env/
+ENV/
+.env
+.env.local
+*.env
+
+# ─── Node / React Website ──────────────────────────────────────────
+cfp_website/node_modules/
+cfp_website/.vite/
+
+# ─── Secrets & credentials ─────────────────────────────────────────
+*.pem
+*.key
+secrets.json
+.streamlit/secrets.toml
+
+# ─── OS / Editor ───────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ─── Temp files ────────────────────────────────────────────────────
+~$*
+*.tmp
