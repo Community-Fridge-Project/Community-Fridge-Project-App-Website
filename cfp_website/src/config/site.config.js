@@ -2,13 +2,8 @@
  * site.config.js — Community Fridge Project
  * ─────────────────────────────────────────────────────────────────────────────
  * SINGLE EDIT POINT for all site-wide configurable content.
- *
- * Instructions:
- *   • Update values here to change branding, copy, contact info, or operational data.
- *   • Do NOT hardcode content in page components — import from here instead.
- *   • To add a fridge location, push to FRIDGE_LOCATIONS.
- *   • To change volunteer slot defaults, edit VOLUNTEER_SLOTS.
- *   • Admin password is set in ADMIN_CONFIG (replace with Supabase auth later).
+ * All values here are defaults — the Admin CMS can override any of them via
+ * localStorage. Edit here to change baseline content across the whole site.
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
@@ -19,13 +14,14 @@ export const BRAND = {
   domain: 'communityfridgeproject.org',
   url: 'https://communityfridgeproject.org',
   email: 'hello@communityfridgeproject.org',
-  phone: '',                          // Add phone number when available
+  phone: '',
+  location: 'Oak Park, IL & Austin Neighborhood, Chicago, IL',
   socialMedia: {
-    instagram: '',                    // e.g. 'https://instagram.com/cfpaustin'
+    instagram: '',
     facebook: '',
     twitter: '',
   },
-  primaryColor: '#3BAA35',            // Keep in sync with tailwind.config.js brand-500
+  primaryColor: '#3BAA35',
 }
 
 // ─── NAVIGATION ─────────────────────────────────────────────────────────────
@@ -49,11 +45,12 @@ export const HOME = {
   mission: {
     title: 'Our Mission',
     body: `The Community Fridge Project believes that no one should go hungry. We maintain a network
-      of free community refrigerators across Austin where anyone can take what they need — no questions asked.
+      of free community refrigerators across the Oak Park Illinois and Austin Chicago Communities,
+      where anyone can take what they need — No cost, No ID, no questions asked.
       Our fridges are stocked by volunteers, donors, and neighbors who believe in the power of mutual aid.`,
   },
   impactStats: [
-    { value: '6+',    label: 'Community Fridges in Austin' },
+    { value: '5',     label: 'Community Fridges' },
     { value: '100+',  label: 'Active Volunteers' },
     { value: '1,000+', label: 'Meals Served Monthly' },
     { value: '0',     label: 'Cost to Take Food' },
@@ -74,35 +71,54 @@ export const HOME = {
       {
         icon: '🍱',
         title: 'Take What You Need',
-        description: 'Our fridges are open 24/7 — take what you need, leave what you can.',
+        description: 'Our fridges are open 24/7 — take what you need, leave what you can. No cost, no ID, no questions asked.',
       },
     ],
   },
 }
 
 // ─── FRIDGE LOCATIONS ────────────────────────────────────────────────────────
-// Add or remove fridge locations here. Used on the About and Volunteer pages.
+// Each fridge has a Google Maps URL for easy navigation.
+// Add or remove fridges here, or manage them via the Admin portal.
 export const FRIDGE_LOCATIONS = [
-  { id: 1, name: 'Austin Market Fridge',     neighborhood: 'Central Austin',  address: 'Austin, TX' },
-  { id: 2, name: 'East Side Community Fridge', neighborhood: 'East Austin',   address: 'Austin, TX' },
-  { id: 3, name: 'South Austin Fridge',      neighborhood: 'South Austin',    address: 'Austin, TX' },
-  { id: 4, name: 'North Loop Fridge',        neighborhood: 'North Loop',      address: 'Austin, TX' },
-  { id: 5, name: 'Mueller Neighborhood Fridge', neighborhood: 'Mueller',      address: 'Austin, TX' },
-  { id: 6, name: 'Rundberg Fridge',          neighborhood: 'Rundberg',        address: 'Austin, TX' },
+  {
+    id: 1,
+    name: 'Grace Episcopal Church',
+    neighborhood: 'Oak Park, IL',
+    address: '924 Lake Street, Oak Park, IL',
+    mapsUrl: 'https://maps.google.com/?q=924+Lake+Street,+Oak+Park,+IL',
+  },
+  {
+    id: 2,
+    name: 'Edwin Gale House',
+    neighborhood: 'Oak Park, IL',
+    address: '124 N Kenilworth Ave, Oak Park, IL',
+    mapsUrl: 'https://maps.google.com/?q=124+N+Kenilworth+Ave,+Oak+Park,+IL',
+  },
+  {
+    id: 3,
+    name: 'Boulevard Presbyterian Church',
+    neighborhood: 'Oak Park, IL',
+    address: '607 Harvard St, Oak Park, IL',
+    mapsUrl: 'https://maps.google.com/?q=607+Harvard+St,+Oak+Park,+IL',
+  },
+  {
+    id: 4,
+    name: 'A House in Austin',
+    neighborhood: 'Austin, Chicago, IL',
+    address: 'Austin Neighborhood, Chicago, IL',
+    mapsUrl: 'https://maps.google.com/?q=Austin+Neighborhood,+Chicago,+IL',
+  },
+  {
+    id: 5,
+    name: 'United Lutheran Church',
+    neighborhood: 'Oak Park, IL',
+    address: '409 Greenfield St, Oak Park, IL',
+    mapsUrl: 'https://maps.google.com/?q=409+Greenfield+St,+Oak+Park,+IL',
+  },
 ]
 
 // ─── VOLUNTEER SLOTS ─────────────────────────────────────────────────────────
-// Default slot data used in the Volunteer Dashboard (static shell).
-// Replace with Supabase query when wiring up the backend.
-//
-// Fields:
-//   activity   — display name of the volunteer activity
-//   day        — day of week
-//   optimal    — ideal number of volunteers
-//   max        — maximum volunteers allowed
-//   filled     — currently signed-up count (pulled from DB later)
-//   icon       — emoji for visual clarity
-//   notes      — optional short description shown on the dashboard card
 export const VOLUNTEER_SLOTS = [
   {
     id: 'monday-sack-lunch',
@@ -162,17 +178,17 @@ export const VOLUNTEER_SLOTS = [
     max: 35,
     filled: 22,
     icon: '🧹',
-    notes: '6 fridges across Austin — daily wipe-downs and safety checks.',
+    notes: '5 fridges across Oak Park & Austin Chicago — daily wipe-downs and safety checks.',
   },
   {
-    id: 'saturday-tovala',
+    id: 'thursday-tovala',
     activity: 'Tovala Food Recovery',
-    day: 'Saturday',
+    day: 'Thursday',
     optimal: 4,
     max: 6,
     filled: 3,
     icon: '🚗',
-    notes: 'Saturday AMs at Carol Stream location. Driver required.',
+    notes: 'Thursdays 9:00 AM – 1:00 PM. Driver required.',
   },
   {
     id: 'delivery-driving',
@@ -190,12 +206,23 @@ export const VOLUNTEER_SLOTS = [
 export const TEAM = {
   headline: 'Meet Our Community',
   intro: `The Community Fridge Project is powered by dedicated volunteers and organizers
-    who believe access to food is a basic human right. We are neighbors helping neighbors.`,
+    in Oak Park and the Austin neighborhood of Chicago who believe access to food is a basic human right.
+    We are neighbors helping neighbors.`,
+  ourStory: {
+    title: 'How It Started',
+    body1: `The Community Fridge Project began with a simple belief: no one in our community should go
+      hungry when food is available. What started as a single refrigerator on a neighborhood corner
+      has grown into a network of five community fridges serving both Oak Park, IL and the Austin
+      neighborhood of Chicago.`,
+    body2: `We operate on the principles of mutual aid — neighbors helping neighbors, with no
+      hierarchy, no gatekeeping, and no judgment. Our fridges are open to everyone,
+      always free, and stocked daily by community members just like you.`,
+  },
   organizers: [
     {
       name: 'Karen',
       role: 'Founder & Lead Organizer',
-      bio: 'Karen founded the Community Fridge Project with a single refrigerator and a big vision. She coordinates day-to-day operations, volunteer scheduling, and partnerships across Austin.',
+      bio: 'Karen founded the Community Fridge Project with a single refrigerator and a big vision. She coordinates day-to-day operations, volunteer scheduling, and partnerships across Oak Park and Chicago\'s Austin neighborhood.',
     },
   ],
   advisory: {
@@ -204,14 +231,14 @@ export const TEAM = {
   },
 }
 
-// ─── NEWS & EVENTS (seed data — admin can override via CMS) ──────────────────
+// ─── NEWS & EVENTS (seed data) ───────────────────────────────────────────────
 export const DEFAULT_NEWS = [
   {
     id: 1,
     type: 'news',
     title: 'Welcome to the Community Fridge Project Website!',
     date: '2026-03-27',
-    excerpt: 'We\'re thrilled to launch our new website. Stay tuned for updates on volunteer opportunities, new fridge locations, and ways to get involved.',
+    excerpt: 'We\'re thrilled to launch our new website serving Oak Park, IL and the Austin neighborhood of Chicago. Stay tuned for updates on volunteer opportunities, new fridge locations, and ways to get involved.',
     body: 'Full article coming soon.',
     author: 'Karen',
     published: true,
@@ -221,7 +248,7 @@ export const DEFAULT_NEWS = [
     type: 'event',
     title: 'Monthly Advisory Meeting',
     date: '2026-04-15',
-    excerpt: 'Join our monthly advisory team meeting to discuss expansion plans and community outreach.',
+    excerpt: 'Join our monthly advisory team meeting to discuss expansion plans and community outreach across Oak Park and Austin Chicago.',
     body: 'Details to be announced.',
     author: 'Karen',
     published: true,
@@ -231,12 +258,13 @@ export const DEFAULT_NEWS = [
 // ─── DONATE PAGE ─────────────────────────────────────────────────────────────
 export const DONATE = {
   headline: 'Support the Community Fridge Project',
-  intro: `Every dollar and every food donation makes a direct impact. Your contribution helps us
-    stock fridges, expand our network, and keep food accessible to every neighbor who needs it.`,
+  intro: `Every dollar and every food donation makes a direct impact in Oak Park and Chicago's Austin
+    neighborhood. Your contribution helps us stock fridges, expand our network, and keep food
+    accessible to every neighbor who needs it.`,
   monetaryOptions: [
-    { amount: 10,  label: '$10', description: 'Stocks a fridge shelf for one day' },
-    { amount: 25,  label: '$25', description: 'Covers a week of cleaning supplies' },
-    { amount: 50,  label: '$50', description: 'Funds a full grocery run' },
+    { amount: 10,  label: '$10',  description: 'Stocks a fridge shelf for one day' },
+    { amount: 25,  label: '$25',  description: 'Covers a week of cleaning supplies' },
+    { amount: 50,  label: '$50',  description: 'Funds a full grocery run' },
     { amount: 100, label: '$100', description: 'Sponsors a fridge for a month' },
   ],
   foodItems: [
@@ -244,27 +272,24 @@ export const DONATE = {
     'Non-perishable canned goods',
     'Bread and baked goods',
     'Dairy products (within date)',
-    'Prepared meals (sealed and labeled)',
+    'Prepared meals (sealed and labeled with date)',
     'Baby food and formula',
   ],
-  dropoffNote: 'Drop off at any of our 6 fridge locations — no appointment needed.',
-  // Add payment processor link when ready (e.g. Venmo, PayPal, Stripe)
+  dropoffNote: 'Drop off at any of our 5 fridge locations in Oak Park, IL or Austin Chicago — no appointment needed.',
   paymentLink: '',
 }
 
 // ─── CONTACT PAGE ────────────────────────────────────────────────────────────
 export const CONTACT = {
   headline: 'Get in Touch',
-  intro: 'Have a question, want to partner with us, or need to report a fridge issue? We\'d love to hear from you.',
+  intro: 'Have a question, want to partner with us, or need to report a fridge issue in Oak Park or Austin Chicago? We\'d love to hear from you.',
   email: BRAND.email,
   responseTime: 'We typically respond within 2 business days.',
 }
 
 // ─── ADMIN CONFIG ────────────────────────────────────────────────────────────
-// ⚠️  TEMPORARY: password-based admin for the static shell.
-//     Replace with Supabase Auth when wiring up the backend.
 export const ADMIN_CONFIG = {
-  password: 'cfp-admin-2026',          // ← Change this before going live
-  sessionKey: 'cfp_admin_session',      // localStorage key for session token
-  contentKey: 'cfp_admin_content',      // localStorage key for CMS content
+  password: 'cfp-admin-2026',
+  sessionKey: 'cfp_admin_session',
+  contentKey: 'cfp_admin_content',
 }

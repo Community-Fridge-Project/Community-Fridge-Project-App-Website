@@ -1,8 +1,11 @@
 import { Link } from 'react-router-dom'
 import { Heart, Package, MapPin, CheckCircle } from 'lucide-react'
-import { DONATE, FRIDGE_LOCATIONS } from '../config/site.config'
+import { DONATE } from '../config/site.config'
+import { useContent } from '../hooks/useContent'
 
 export default function Donate() {
+  const { pages, fridges } = useContent()
+
   return (
     <>
       {/* ── PAGE HEADER ─────────────────────────────────────────────── */}
@@ -11,9 +14,9 @@ export default function Donate() {
           <span className="badge-green bg-white/20 text-white border border-white/30 mb-4 block w-fit">
             Make a Difference
           </span>
-          <h1 className="text-white mb-4">How to Donate</h1>
+          <h1 className="text-white mb-4">{pages.donateHeadline}</h1>
           <p className="text-brand-100 text-xl max-w-2xl">
-            {DONATE.intro}
+            {pages.donateIntro}
           </p>
         </div>
       </section>
@@ -33,7 +36,7 @@ export default function Donate() {
               </div>
               <p className="text-gray-600 mb-8 leading-relaxed">
                 Your financial contribution goes directly to stocking fridges, covering supplies,
-                and expanding our network. Every dollar makes an immediate impact.
+                and expanding our network across Oak Park and Austin Chicago. Every dollar makes an immediate impact.
               </p>
 
               <div className="grid grid-cols-2 gap-4 mb-8">
@@ -113,9 +116,9 @@ export default function Donate() {
                   <MapPin size={16} className="text-brand-600 mt-0.5 flex-shrink-0" />
                   <div>
                     <p className="text-brand-700 font-semibold text-sm mb-1">Drop-Off Locations</p>
-                    <p className="text-gray-600 text-sm">{DONATE.dropoffNote}</p>
+                    <p className="text-gray-600 text-sm">{pages.dropoffNote}</p>
                     <p className="text-gray-500 text-xs mt-1">
-                      {FRIDGE_LOCATIONS.length} fridges across Austin • Open 24/7
+                      {fridges.length} fridge{fridges.length !== 1 ? 's' : ''} across Oak Park &amp; Austin Chicago · Open 24/7
                     </p>
                   </div>
                 </div>
@@ -132,8 +135,8 @@ export default function Donate() {
           <h2 className="mb-6">Every Contribution Counts</h2>
           <p className="text-lg text-gray-600 leading-relaxed mb-8">
             Whether you drop off a bag of groceries or write a check, your generosity
-            directly feeds Austin neighbors who need it most. The Community Fridge Project
-            is 100% community-powered.
+            directly feeds neighbors in Oak Park and Austin Chicago who need it most.
+            The Community Fridge Project is 100% community-powered.
           </p>
           <Link to="/contact" className="btn-primary text-base px-8 py-4">
             Get in Touch

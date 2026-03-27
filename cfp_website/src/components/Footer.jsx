@@ -1,8 +1,25 @@
 import { Link } from 'react-router-dom'
 import { Heart, Mail } from 'lucide-react'
-import { BRAND, NAV_LINKS, FRIDGE_LOCATIONS } from '../config/site.config'
+import { BRAND, NAV_LINKS } from '../config/site.config'
+import { useContent } from '../hooks/useContent'
+
+// ─── HAND-DRAWN HEART (footer) ────────────────────────────────────────────────
+function FooterHeart() {
+  return (
+    <svg width="20" height="19" viewBox="0 0 40 38" fill="none" aria-hidden="true">
+      <path
+        d="M20 35 C19 34 14 30 10 26 C6 22 2 18 2 13 C2 8 5.5 4 11 4
+           C14 4 17 5.5 20 9 C23 5.5 26 4 29 4 C34.5 4 38 8 38 13
+           C38 18 34 22 30 26 C26 30 21 34 20 35Z"
+        fill="white" stroke="white" strokeWidth="1.5"
+        strokeLinecap="round" strokeLinejoin="round" opacity="0.9"
+      />
+    </svg>
+  )
+}
 
 export default function Footer() {
+  const { fridges } = useContent()
   const year = new Date().getFullYear()
 
   return (
@@ -15,7 +32,7 @@ export default function Footer() {
           <div className="lg:col-span-2">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 bg-brand-500 rounded-lg flex items-center justify-center flex-shrink-0">
-                <span className="text-white text-xl" role="img" aria-hidden="true">🥦</span>
+                <FooterHeart />
               </div>
               <div className="leading-none">
                 <span className="block text-white font-extrabold text-lg">Community</span>
@@ -23,7 +40,8 @@ export default function Footer() {
               </div>
             </div>
             <p className="text-gray-400 text-sm leading-relaxed max-w-xs">
-              {BRAND.tagline}. Neighbors feeding neighbors across Austin, TX.
+              {BRAND.tagline}. Neighbors feeding neighbors across Oak Park, IL
+              and the Austin neighborhood of Chicago.
               Free food, always available, no questions asked.
             </p>
             {BRAND.email && (
@@ -40,7 +58,7 @@ export default function Footer() {
 
           {/* Navigation column */}
           <div>
-            <h3 className="text-white font-bold text-base mb-4 uppercase tracking-wider text-sm">
+            <h3 className="text-white font-bold text-sm mb-4 uppercase tracking-wider">
               Navigate
             </h3>
             <ul className="space-y-2">
@@ -57,17 +75,20 @@ export default function Footer() {
             </ul>
           </div>
 
-          {/* Fridge Locations column */}
+          {/* Fridge Locations column — live from CMS */}
           <div>
             <h3 className="text-white font-bold text-sm mb-4 uppercase tracking-wider">
               Our Fridges
             </h3>
             <ul className="space-y-2">
-              {FRIDGE_LOCATIONS.slice(0, 6).map((loc) => (
+              {fridges.slice(0, 6).map((loc) => (
                 <li key={loc.id} className="text-gray-400 text-sm">
-                  📍 {loc.neighborhood}
+                  📍 {loc.name}
                 </li>
               ))}
+              {fridges.length === 0 && (
+                <li className="text-gray-500 text-sm italic">Coming soon</li>
+              )}
             </ul>
           </div>
         </div>
@@ -81,7 +102,7 @@ export default function Footer() {
             © {year} {BRAND.name}. All rights reserved.
           </p>
           <p className="flex items-center gap-1">
-            Made with <Heart size={12} className="text-brand-500 fill-brand-500" /> for Austin neighbors
+            Made with <Heart size={12} className="text-brand-500 fill-brand-500" /> for Oak Park &amp; Austin Chicago neighbors
           </p>
           <Link
             to="/admin"

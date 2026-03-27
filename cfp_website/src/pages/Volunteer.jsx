@@ -21,7 +21,7 @@ const VOLUNTEER_ROLES = [
     title: 'Fridge Cleaner',
     commitment: 'Daily, 30–60 min',
     description:
-      'Wipe down, sanitize, and organize one of our 6 Austin fridges. ~30 cleaners keep all fridges safe and welcoming every day.',
+      'Wipe down, sanitize, and organize one of our fridges across Oak Park and Austin Chicago. ~30 cleaners keep all fridges safe and welcoming every day.',
   },
   {
     icon: '🚗',

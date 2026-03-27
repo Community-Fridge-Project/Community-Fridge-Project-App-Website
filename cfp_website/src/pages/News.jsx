@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react'
-import { Calendar, User, Tag } from 'lucide-react'
-import { DEFAULT_NEWS, ADMIN_CONFIG } from '../config/site.config'
+import { useState } from 'react'
+import { Calendar, User } from 'lucide-react'
+import { useContent } from '../hooks/useContent'
 
 function formatDate(dateStr) {
   return new Date(dateStr).toLocaleDateString('en-US', {
@@ -10,11 +10,7 @@ function formatDate(dateStr) {
 
 function NewsCard({ article }) {
   return (
-    <article
-      className="card hover:border-brand-200 flex flex-col"
-      aria-label={article.title}
-    >
-      {/* Type badge */}
+    <article className="card hover:border-brand-200 flex flex-col" aria-label={article.title}>
       <div className="mb-3">
         <span className={`text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full
           ${article.type === 'event'
@@ -49,31 +45,13 @@ function NewsCard({ article }) {
 }
 
 export default function News() {
+  const { news: allArticles } = useContent()
   const [activeFilter, setActiveFilter] = useState('all')
 
-  // Load articles: admin CMS content first, then fall back to defaults
-  const [articles, setArticles] = useState([])
-
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem(ADMIN_CONFIG.contentKey)
-      if (stored) {
-        const content = JSON.parse(stored)
-        if (content.news && content.news.length > 0) {
-          setArticles(content.news.filter(a => a.published))
-          return
-        }
-      }
-    } catch (_) {}
-    setArticles(DEFAULT_NEWS.filter(a => a.published))
-  }, [])
-
-  const filtered = activeFilter === 'all'
-    ? articles
-    : articles.filter(a => a.type === activeFilter)
-
-  const events = articles.filter(a => a.type === 'event')
-  const news   = articles.filter(a => a.type === 'news')
+  const articles = allArticles.filter(a => a.published)
+  const filtered  = activeFilter === 'all' ? articles : articles.filter(a => a.type === activeFilter)
+  const events    = articles.filter(a => a.type === 'event')
+  const newsOnly  = articles.filter(a => a.type === 'news')
 
   return (
     <>
@@ -85,7 +63,8 @@ export default function News() {
           </span>
           <h1 className="text-white mb-4">News &amp; Events</h1>
           <p className="text-brand-100 text-xl max-w-2xl">
-            Latest updates, announcements, and upcoming events from the Community Fridge Project.
+            Latest updates, announcements, and upcoming events from the Community Fridge Project
+            in Oak Park, IL and the Austin neighborhood of Chicago.
           </p>
         </div>
       </section>
@@ -96,7 +75,7 @@ export default function News() {
           <div className="flex gap-3">
             {[
               { key: 'all',   label: `All (${articles.length})` },
-              { key: 'news',  label: `News (${news.length})` },
+              { key: 'news',  label: `News (${newsOnly.length})` },
               { key: 'event', label: `Events (${events.length})` },
             ].map(tab => (
               <button
@@ -121,7 +100,9 @@ export default function News() {
           {filtered.length === 0 ? (
             <div className="text-center py-20">
               <span className="text-5xl mb-4 block" role="img" aria-hidden="true">📭</span>
-              <h3 className="text-xl font-bold text-gray-500">No {activeFilter === 'all' ? 'posts' : activeFilter + 's'} yet</h3>
+              <h3 className="text-xl font-bold text-gray-500">
+                No {activeFilter === 'all' ? 'posts' : activeFilter + 's'} yet
+              </h3>
               <p className="text-gray-400 mt-2">Check back soon for updates!</p>
             </div>
           ) : (

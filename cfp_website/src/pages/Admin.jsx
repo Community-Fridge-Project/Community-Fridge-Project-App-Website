@@ -1,53 +1,73 @@
 /**
  * Admin.jsx — Community Fridge Project CMS Portal
  * ─────────────────────────────────────────────────────────────────────────────
- * Password-protected admin portal for Karen and team.
+ * Full CMS portal: all page narratives, fridge CRUD, slots, news & events.
  *
- * Features:
- *   • Login gate (password from site.config.js → ADMIN_CONFIG.password)
- *   • News & Events: add, edit, delete, publish/unpublish articles
- *   • Volunteer Slots: update filled counts in real-time
- *   • Page Content: edit mission statement, hero text, donate copy
- *   • All data persisted to localStorage (key: ADMIN_CONFIG.contentKey)
+ * Tabs: Dashboard · News & Events · Volunteer Slots · Fridge Locations · Page Content
  *
- * ⚠️ To wire to Supabase: replace localStorage reads/writes with
- *    Supabase client calls. The shape of `content` state maps directly
- *    to a `site_content` table structure.
+ * Data flow: localStorage → useContent() hook → all public pages (real-time)
+ * ⚠️  Supabase upgrade path: replace localStorage reads/writes with Supabase calls.
  * ─────────────────────────────────────────────────────────────────────────────
  */
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import {
   LogIn, LogOut, Newspaper, Users, FileText, BarChart2,
   Plus, Trash2, Edit3, Eye, EyeOff, Save, CheckCircle,
-  AlertTriangle, ArrowLeft, Settings,
+  AlertTriangle, ArrowLeft, Settings, MapPin, RefreshCw,
+  ExternalLink,
 } from 'lucide-react'
-import { ADMIN_CONFIG, VOLUNTEER_SLOTS, DEFAULT_NEWS, HOME, DONATE } from '../config/site.config'
+import {
+  ADMIN_CONFIG, VOLUNTEER_SLOTS, DEFAULT_NEWS, FRIDGE_LOCATIONS,
+} from '../config/site.config'
+import { DEFAULT_PAGES } from '../hooks/useContent'
 
 // ─── HELPERS ──────────────────────────────────────────────────────────────────
 function loadContent() {
   try {
     const raw = localStorage.getItem(ADMIN_CONFIG.contentKey)
-    if (raw) return JSON.parse(raw)
+    if (raw) {
+      const parsed = JSON.parse(raw)
+      // Back-fill any keys missing from older saves
+      return {
+        news:    parsed.news    ?? [...DEFAULT_NEWS],
+        slots:   parsed.slots   ?? VOLUNTEER_SLOTS.map(s => ({ ...s })),
+        fridges: parsed.fridges ?? FRIDGE_LOCATIONS.map(f => ({ ...f })),
+        pages:   { ...DEFAULT_PAGES, ...(parsed.pages ?? {}) },
+      }
+    }
   } catch (_) {}
   return {
     news:    [...DEFAULT_NEWS],
     slots:   VOLUNTEER_SLOTS.map(s => ({ ...s })),
-    pages: {
-      missionBody:  HOME.mission.body,
-      heroHeadline: HOME.hero.headline,
-      heroSub:      HOME.hero.subheadline,
-      donateIntro:  DONATE.intro,
-    },
+    fridges: FRIDGE_LOCATIONS.map(f => ({ ...f })),
+    pages:   { ...DEFAULT_PAGES },
   }
 }
 
 function saveContent(content) {
   localStorage.setItem(ADMIN_CONFIG.contentKey, JSON.stringify(content))
+  // Notify all tabs / useContent() hooks
+  window.dispatchEvent(new CustomEvent('cfp-content-updated'))
 }
 
 function generateId() {
   return Date.now() + Math.random().toString(36).slice(2)
+}
+
+// ─── HAND-DRAWN HEART (admin sidebar) ─────────────────────────────────────────
+function SidebarHeart() {
+  return (
+    <svg width="22" height="21" viewBox="0 0 40 38" fill="none" aria-hidden="true">
+      <path
+        d="M20 35 C19 34 14 30 10 26 C6 22 2 18 2 13 C2 8 5.5 4 11 4
+           C14 4 17 5.5 20 9 C23 5.5 26 4 29 4 C34.5 4 38 8 38 13
+           C38 18 34 22 30 26 C26 30 21 34 20 35Z"
+        fill="white" stroke="white" strokeWidth="1.5"
+        strokeLinecap="round" strokeLinejoin="round" opacity="0.9"
+      />
+    </svg>
+  )
 }
 
 // ─── LOGIN SCREEN ─────────────────────────────────────────────────────────────
@@ -71,9 +91,9 @@ function LoginScreen({ onLogin }) {
                     flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-brand-100 rounded-2xl flex items-center justify-center
-                          mx-auto mb-4">
-            <span className="text-3xl" role="img" aria-label="Fridge">🥦</span>
+          <div className="w-16 h-16 bg-brand-500 rounded-2xl flex items-center justify-center
+                          mx-auto mb-4 shadow-md">
+            <SidebarHeart />
           </div>
           <h1 className="text-2xl font-extrabold text-gray-900">Admin Portal</h1>
           <p className="text-gray-500 text-sm mt-1">Community Fridge Project</p>
@@ -111,20 +131,21 @@ function LoginScreen({ onLogin }) {
 
 // ─── NAV SIDEBAR ──────────────────────────────────────────────────────────────
 const ADMIN_TABS = [
-  { id: 'dashboard', label: 'Dashboard',       icon: BarChart2 },
-  { id: 'news',      label: 'News & Events',   icon: Newspaper },
-  { id: 'slots',     label: 'Volunteer Slots', icon: Users },
-  { id: 'pages',     label: 'Page Content',    icon: FileText },
+  { id: 'dashboard', label: 'Dashboard',         icon: BarChart2 },
+  { id: 'news',      label: 'News & Events',     icon: Newspaper },
+  { id: 'slots',     label: 'Volunteer Slots',   icon: Users },
+  { id: 'fridges',   label: 'Fridge Locations',  icon: MapPin },
+  { id: 'pages',     label: 'Page Content',      icon: FileText },
 ]
 
 function AdminNav({ activeTab, onTab, onLogout }) {
   return (
-    <aside className="w-full md:w-60 bg-gray-900 text-gray-300 flex-shrink-0">
+    <aside className="w-full md:w-64 bg-gray-900 text-gray-300 flex-shrink-0">
       {/* Logo */}
       <div className="p-6 border-b border-gray-800">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 bg-brand-500 rounded-lg flex items-center justify-center">
-            <span className="text-white text-lg">🥦</span>
+          <div className="w-9 h-9 bg-brand-500 rounded-lg flex items-center justify-center flex-shrink-0">
+            <SidebarHeart />
           </div>
           <div className="leading-none">
             <p className="text-white font-bold text-sm">CFP Admin</p>
@@ -156,7 +177,7 @@ function AdminNav({ activeTab, onTab, onLogout }) {
       </nav>
 
       {/* Footer */}
-      <div className="absolute bottom-0 w-full md:w-60 p-4 border-t border-gray-800 space-y-2">
+      <div className="absolute bottom-0 w-full md:w-64 p-4 border-t border-gray-800 space-y-2">
         <Link
           to="/"
           className="w-full flex items-center gap-2 text-gray-400 hover:text-white text-sm
@@ -177,7 +198,7 @@ function AdminNav({ activeTab, onTab, onLogout }) {
 }
 
 // ─── DASHBOARD TAB ────────────────────────────────────────────────────────────
-function DashboardTab({ content }) {
+function DashboardTab({ content, onTab }) {
   const published = content.news.filter(a => a.published).length
   const events    = content.news.filter(a => a.type === 'event').length
   const slotsOpen = content.slots.filter(s => s.filled < s.optimal).length
@@ -187,28 +208,48 @@ function DashboardTab({ content }) {
       <h2 className="text-2xl font-bold mb-6 text-gray-900">Dashboard</h2>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-5 mb-10">
         {[
-          { label: 'Published Articles', value: published, icon: '📰', color: 'brand' },
-          { label: 'Upcoming Events',    value: events,    icon: '📅', color: 'blue' },
-          { label: 'Volunteer Slots',    value: content.slots.length, icon: '👥', color: 'purple' },
-          { label: 'Slots Needing Help', value: slotsOpen, icon: '🚨', color: 'red' },
+          { label: 'Published Articles', value: published,            icon: '📰', tab: 'news' },
+          { label: 'Upcoming Events',    value: events,               icon: '📅', tab: 'news' },
+          { label: 'Fridge Locations',   value: content.fridges.length, icon: '🧊', tab: 'fridges' },
+          { label: 'Slots Needing Help', value: slotsOpen,            icon: '🚨', tab: 'slots' },
         ].map((stat, i) => (
-          <div key={i} className="card text-center">
+          <button
+            key={i}
+            onClick={() => onTab(stat.tab)}
+            className="card text-center hover:border-brand-300 hover:shadow-md transition-all cursor-pointer"
+          >
             <div className="text-3xl mb-2" role="img" aria-hidden="true">{stat.icon}</div>
             <p className="text-3xl font-extrabold text-gray-900 mb-1">{stat.value}</p>
             <p className="text-xs text-gray-500 font-medium">{stat.label}</p>
-          </div>
+          </button>
         ))}
       </div>
+
       <div className="bg-brand-50 border border-brand-200 rounded-xl p-5">
-        <h3 className="font-bold text-brand-800 mb-2 flex items-center gap-2">
-          <Settings size={16} /> Quick Start Guide
+        <h3 className="font-bold text-brand-800 mb-3 flex items-center gap-2">
+          <Settings size={16} /> Quick Guide
         </h3>
-        <ul className="text-sm text-brand-700 space-y-1 list-disc list-inside">
-          <li>Use <strong>News &amp; Events</strong> to post updates, announcements, and upcoming events.</li>
-          <li>Use <strong>Volunteer Slots</strong> to update how many volunteers are signed up for each activity.</li>
-          <li>Use <strong>Page Content</strong> to edit the mission statement and homepage copy.</li>
-          <li>All changes save automatically to this browser. Connect Supabase to sync across devices.</li>
-        </ul>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm text-brand-700">
+          <div className="flex items-start gap-2">
+            <span className="mt-0.5 flex-shrink-0">📰</span>
+            <span><strong>News &amp; Events</strong> — Post announcements and upcoming events visible on the News page.</span>
+          </div>
+          <div className="flex items-start gap-2">
+            <span className="mt-0.5 flex-shrink-0">👥</span>
+            <span><strong>Volunteer Slots</strong> — Update filled counts. Numbers appear live on the Volunteer Dashboard.</span>
+          </div>
+          <div className="flex items-start gap-2">
+            <span className="mt-0.5 flex-shrink-0">🧊</span>
+            <span><strong>Fridge Locations</strong> — Add, edit, or remove community fridges. Google Maps links included.</span>
+          </div>
+          <div className="flex items-start gap-2">
+            <span className="mt-0.5 flex-shrink-0">📝</span>
+            <span><strong>Page Content</strong> — Edit every narrative block: Home, About, Donate, and Contact pages.</span>
+          </div>
+        </div>
+        <p className="text-xs text-brand-600 mt-3 border-t border-brand-200 pt-3">
+          All changes save automatically and update the live website in real-time.
+        </p>
       </div>
     </div>
   )
@@ -223,7 +264,6 @@ const BLANK_ARTICLE = {
 function NewsTab({ content, onChange }) {
   const [editing, setEditing] = useState(null)
   const [form, setForm]       = useState(BLANK_ARTICLE)
-  const [saved, setSaved]     = useState(false)
 
   const openNew  = () => { setForm({ ...BLANK_ARTICLE, date: new Date().toISOString().split('T')[0] }); setEditing('new') }
   const openEdit = (article) => { setForm({ ...article }); setEditing(article.id) }
@@ -237,12 +277,11 @@ function NewsTab({ content, onChange }) {
       updated = content.news.map(a => a.id === form.id ? { ...form } : a)
     }
     onChange({ ...content, news: updated })
-    setSaved(true); setTimeout(() => setSaved(false), 2000)
     closeForm()
   }
 
   const handleDelete = (id) => {
-    if (!confirm('Delete this article?')) return
+    if (!window.confirm('Delete this article permanently?')) return
     onChange({ ...content, news: content.news.filter(a => a.id !== id) })
   }
 
@@ -262,16 +301,15 @@ function NewsTab({ content, onChange }) {
         </button>
       </div>
 
-      {/* Article form */}
       {editing !== null && (
-        <div className="card mb-8 border-brand-300">
+        <div className="card mb-8 border-brand-300 bg-brand-50/30">
           <h3 className="font-bold text-lg mb-4 text-gray-900">
             {editing === 'new' ? 'Create New Post' : 'Edit Post'}
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
             <div>
               <label className="form-label">Type</label>
-              <select name="type" value={form.type}
+              <select value={form.type}
                 onChange={e => setForm(p => ({ ...p, type: e.target.value }))}
                 className="form-input">
                 <option value="news">News Article</option>
@@ -310,7 +348,7 @@ function NewsTab({ content, onChange }) {
                 onChange={e => setForm(p => ({ ...p, author: e.target.value }))}
                 className="form-input" />
             </div>
-            <div className="flex items-end">
+            <div className="flex items-end pb-1">
               <label className="flex items-center gap-2 cursor-pointer">
                 <input type="checkbox" checked={form.published}
                   onChange={e => setForm(p => ({ ...p, published: e.target.checked }))}
@@ -320,7 +358,8 @@ function NewsTab({ content, onChange }) {
             </div>
           </div>
           <div className="flex gap-3">
-            <button onClick={handleSave} className="btn-primary text-sm px-5 py-2">
+            <button onClick={handleSave} disabled={!form.title}
+              className="btn-primary text-sm px-5 py-2 disabled:opacity-50">
               <Save size={14} /> Save Post
             </button>
             <button onClick={closeForm} className="btn-secondary text-sm px-5 py-2">
@@ -330,7 +369,6 @@ function NewsTab({ content, onChange }) {
         </div>
       )}
 
-      {/* Article list */}
       <div className="space-y-3">
         {content.news.length === 0 && (
           <p className="text-gray-400 text-sm text-center py-10">No posts yet. Create your first one!</p>
@@ -340,7 +378,7 @@ function NewsTab({ content, onChange }) {
                className={`flex items-center justify-between p-4 rounded-xl border
                            ${article.published ? 'bg-white border-gray-200' : 'bg-gray-50 border-gray-200 opacity-75'}`}>
             <div className="min-w-0 flex-1 mr-4">
-              <div className="flex items-center gap-2 flex-wrap mb-0.5">
+              <div className="flex items-center gap-2 flex-wrap mb-1">
                 <span className={`text-xs font-bold px-2 py-0.5 rounded-full
                   ${article.type === 'event' ? 'bg-blue-100 text-blue-700' : 'bg-brand-100 text-brand-700'}`}>
                   {article.type === 'event' ? '📅 Event' : '📰 News'}
@@ -351,7 +389,7 @@ function NewsTab({ content, onChange }) {
                 </span>
               </div>
               <p className="font-semibold text-gray-900 truncate text-sm">{article.title || 'Untitled'}</p>
-              <p className="text-xs text-gray-400">{article.date}</p>
+              <p className="text-xs text-gray-400">{article.date} · {article.author}</p>
             </div>
             <div className="flex items-center gap-1 flex-shrink-0">
               <button onClick={() => togglePublish(article.id)}
@@ -377,8 +415,6 @@ function NewsTab({ content, onChange }) {
 
 // ─── VOLUNTEER SLOTS TAB ──────────────────────────────────────────────────────
 function SlotsTab({ content, onChange }) {
-  const [saved, setSaved] = useState(false)
-
   const updateFilled = (id, val) => {
     onChange({
       ...content,
@@ -388,22 +424,14 @@ function SlotsTab({ content, onChange }) {
     })
   }
 
-  const handleSaveAll = () => {
-    saveContent(content)
-    setSaved(true); setTimeout(() => setSaved(false), 2000)
-  }
-
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-2xl font-bold text-gray-900">Volunteer Slots</h2>
-        <button onClick={handleSaveAll} className="btn-primary text-sm px-4 py-2">
-          {saved ? <><CheckCircle size={14} /> Saved!</> : <><Save size={14} /> Save All</>}
-        </button>
       </div>
       <p className="text-gray-500 text-sm mb-6">
-        Update the <strong>filled</strong> count for each activity as volunteers sign up.
-        These numbers appear live on the Volunteer Dashboard.
+        Update the <strong>filled</strong> count as volunteers sign up.
+        Changes save automatically and update the live Volunteer Dashboard in real-time.
       </p>
       <div className="space-y-3">
         {content.slots.map(slot => {
@@ -418,12 +446,11 @@ function SlotsTab({ content, onChange }) {
               <span className="text-2xl flex-shrink-0">{slot.icon}</span>
               <div className="flex-1 min-w-0">
                 <p className="font-semibold text-gray-900 text-sm">{slot.activity}</p>
-                <p className="text-xs text-gray-500">{slot.day} · max {slot.max}</p>
+                <p className="text-xs text-gray-500">{slot.day}</p>
+                {slot.notes && <p className="text-xs text-gray-400 mt-0.5 truncate">{slot.notes}</p>}
               </div>
-              <div className="flex items-center gap-3 flex-shrink-0">
-                <label className="text-xs text-gray-500 font-medium whitespace-nowrap">
-                  Filled:
-                </label>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <label className="text-xs text-gray-500 font-medium whitespace-nowrap">Filled:</label>
                 <input
                   type="number" min={0} max={slot.max}
                   value={slot.filled}
@@ -431,7 +458,7 @@ function SlotsTab({ content, onChange }) {
                   className="w-16 text-center border border-gray-300 rounded-lg py-1.5 text-sm
                              font-bold focus:outline-none focus:ring-2 focus:ring-brand-500"
                 />
-                <span className="text-xs text-gray-500">/ {slot.optimal}</span>
+                <span className="text-xs text-gray-500 whitespace-nowrap">/ {slot.optimal} optimal</span>
               </div>
             </div>
           )
@@ -441,65 +468,260 @@ function SlotsTab({ content, onChange }) {
   )
 }
 
-// ─── PAGE CONTENT TAB ─────────────────────────────────────────────────────────
-function PagesTab({ content, onChange }) {
-  const [saved, setSaved] = useState(false)
-  const pages = content.pages
+// ─── FRIDGE LOCATIONS TAB ─────────────────────────────────────────────────────
+const BLANK_FRIDGE = { id: null, name: '', neighborhood: '', address: '', mapsUrl: '' }
 
-  const update = (key, val) => onChange({ ...content, pages: { ...pages, [key]: val } })
+function FridgesTab({ content, onChange }) {
+  const [editing, setEditing] = useState(null)   // null | 'new' | fridge.id
+  const [form, setForm]       = useState(BLANK_FRIDGE)
+
+  const openNew  = () => { setForm({ ...BLANK_FRIDGE }); setEditing('new') }
+  const openEdit = (fridge) => { setForm({ ...fridge }); setEditing(fridge.id) }
+  const closeForm = () => { setEditing(null); setForm(BLANK_FRIDGE) }
 
   const handleSave = () => {
-    saveContent(content)
-    setSaved(true); setTimeout(() => setSaved(false), 2000)
+    let updated
+    if (editing === 'new') {
+      const nextId = Math.max(0, ...content.fridges.map(f => Number(f.id) || 0)) + 1
+      updated = [...content.fridges, { ...form, id: nextId }]
+    } else {
+      updated = content.fridges.map(f => f.id === form.id ? { ...form } : f)
+    }
+    onChange({ ...content, fridges: updated })
+    closeForm()
+  }
+
+  const handleDelete = (id) => {
+    if (!window.confirm('Remove this fridge location?')) return
+    onChange({ ...content, fridges: content.fridges.filter(f => f.id !== id) })
+  }
+
+  const handleReset = () => {
+    if (!window.confirm('Reset all fridge locations back to the original defaults?')) return
+    onChange({ ...content, fridges: FRIDGE_LOCATIONS.map(f => ({ ...f })) })
   }
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold text-gray-900">Page Content</h2>
-        <button onClick={handleSave} className="btn-primary text-sm px-4 py-2">
-          {saved ? <><CheckCircle size={14} /> Saved!</> : <><Save size={14} /> Save Changes</>}
-        </button>
+      <div className="flex items-center justify-between mb-2">
+        <h2 className="text-2xl font-bold text-gray-900">Fridge Locations</h2>
+        <div className="flex gap-2">
+          <button onClick={handleReset}
+            className="btn-secondary text-sm px-3 py-2 flex items-center gap-1.5">
+            <RefreshCw size={13} /> Reset Defaults
+          </button>
+          <button onClick={openNew} className="btn-primary text-sm px-4 py-2">
+            <Plus size={15} /> Add Fridge
+          </button>
+        </div>
       </div>
       <p className="text-gray-500 text-sm mb-6">
-        Edit key copy blocks used across the website. Changes update on the live site immediately after saving.
+        {content.fridges.length} active location{content.fridges.length !== 1 ? 's' : ''}.
+        Changes appear live on the About and Donate pages.
       </p>
+
+      {/* Add / Edit form */}
+      {editing !== null && (
+        <div className="card mb-8 border-brand-300 bg-brand-50/30">
+          <h3 className="font-bold text-lg mb-4 text-gray-900">
+            {editing === 'new' ? 'Add New Fridge Location' : 'Edit Fridge Location'}
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+            <div>
+              <label className="form-label">Location Name *</label>
+              <input type="text" value={form.name} placeholder="e.g. Grace Episcopal Church"
+                onChange={e => setForm(p => ({ ...p, name: e.target.value }))}
+                className="form-input" />
+            </div>
+            <div>
+              <label className="form-label">Neighborhood / City</label>
+              <input type="text" value={form.neighborhood} placeholder="e.g. Oak Park, IL"
+                onChange={e => setForm(p => ({ ...p, neighborhood: e.target.value }))}
+                className="form-input" />
+            </div>
+          </div>
+          <div className="mb-4">
+            <label className="form-label">Street Address</label>
+            <input type="text" value={form.address} placeholder="e.g. 924 Lake Street, Oak Park, IL"
+              onChange={e => setForm(p => ({ ...p, address: e.target.value }))}
+              className="form-input" />
+          </div>
+          <div className="mb-5">
+            <label className="form-label">Google Maps URL</label>
+            <input type="url" value={form.mapsUrl}
+              placeholder="https://maps.google.com/?q=..."
+              onChange={e => setForm(p => ({ ...p, mapsUrl: e.target.value }))}
+              className="form-input" />
+            <p className="text-xs text-gray-400 mt-1">
+              Tip: search the address on Google Maps, then copy the URL from your browser.
+            </p>
+          </div>
+          <div className="flex gap-3">
+            <button onClick={handleSave} disabled={!form.name}
+              className="btn-primary text-sm px-5 py-2 disabled:opacity-50">
+              <Save size={14} /> Save Location
+            </button>
+            <button onClick={closeForm} className="btn-secondary text-sm px-5 py-2">
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Fridge list */}
+      <div className="space-y-3">
+        {content.fridges.length === 0 && (
+          <p className="text-gray-400 text-sm text-center py-10">No fridge locations yet. Add your first one!</p>
+        )}
+        {content.fridges.map(fridge => (
+          <div key={fridge.id}
+               className="flex items-center justify-between p-4 rounded-xl border border-gray-200 bg-white hover:border-brand-200 transition-all">
+            <div className="flex items-start gap-3 min-w-0 flex-1 mr-4">
+              <div className="w-9 h-9 bg-brand-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+                <MapPin size={17} className="text-brand-600" />
+              </div>
+              <div className="min-w-0">
+                <p className="font-semibold text-gray-900 text-sm">{fridge.name}</p>
+                <p className="text-xs text-brand-600 font-medium">{fridge.neighborhood}</p>
+                <p className="text-xs text-gray-400 mt-0.5 truncate">{fridge.address}</p>
+                {fridge.mapsUrl && (
+                  <a href={fridge.mapsUrl} target="_blank" rel="noopener noreferrer"
+                     className="text-xs text-blue-500 hover:text-blue-700 flex items-center gap-1 mt-0.5 w-fit">
+                    <ExternalLink size={10} /> Get Directions
+                  </a>
+                )}
+              </div>
+            </div>
+            <div className="flex items-center gap-1 flex-shrink-0">
+              <button onClick={() => openEdit(fridge)} title="Edit"
+                      className="p-2 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-all">
+                <Edit3 size={16} />
+              </button>
+              <button onClick={() => handleDelete(fridge.id)} title="Delete"
+                      className="p-2 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all">
+                <Trash2 size={16} />
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ─── PAGE CONTENT TAB ─────────────────────────────────────────────────────────
+function PagesTab({ content, onChange }) {
+  const pages = content.pages
+  const update = (key, val) => onChange({ ...content, pages: { ...pages, [key]: val } })
+
+  // Helper: labeled text input
+  const Field = ({ label, k, type = 'input', rows = 3, placeholder = '' }) => (
+    <div>
+      <label className="form-label">{label}</label>
+      {type === 'input'
+        ? <input type="text" value={pages[k] ?? ''} onChange={e => update(k, e.target.value)}
+            placeholder={placeholder} className="form-input" />
+        : <textarea rows={rows} value={pages[k] ?? ''} onChange={e => update(k, e.target.value)}
+            placeholder={placeholder} className="form-input resize-none" />
+      }
+    </div>
+  )
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-2">
+        <h2 className="text-2xl font-bold text-gray-900">Page Content</h2>
+      </div>
+      <p className="text-gray-500 text-sm mb-6">
+        Edit every text block across the website. Changes save automatically and go live instantly.
+      </p>
+
       <div className="space-y-6">
-        <div className="card">
-          <h3 className="font-bold text-gray-900 mb-4">🏠 Home Page</h3>
-          <div className="space-y-4">
+
+        {/* ── HOME PAGE ──────────────────────────────────────────────── */}
+        <details className="card" open>
+          <summary className="font-bold text-gray-900 cursor-pointer select-none flex items-center gap-2 text-base">
+            🏠 Home Page
+          </summary>
+          <div className="mt-5 space-y-4">
+            <Field label="Hero Headline" k="heroHeadline" placeholder="Neighbors Feeding Neighbors" />
+            <Field label="Hero Subheadline" k="heroSub" placeholder="Free, fresh food — available to anyone, anytime." />
             <div>
-              <label className="form-label">Hero Headline</label>
-              <input type="text" value={pages.heroHeadline}
-                onChange={e => update('heroHeadline', e.target.value)}
-                className="form-input" />
+              <label className="form-label text-xs text-gray-400 mb-2 block">Impact Stats — these appear as the 4 numbers on the homepage.</label>
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="Stat 1 Number" k="stat0" placeholder="5" />
+                <Field label="Stat 1 Label" k="stat0Label" placeholder="Community Fridges" />
+                <Field label="Stat 2 Number" k="stat1" placeholder="100+" />
+                <Field label="Stat 2 Label" k="stat1Label" placeholder="Active Volunteers" />
+                <Field label="Stat 3 Number" k="stat2" placeholder="1,000+" />
+                <Field label="Stat 3 Label" k="stat2Label" placeholder="Meals Served Monthly" />
+                <Field label="Stat 4 Number" k="stat3" placeholder="0" />
+                <Field label="Stat 4 Label" k="stat3Label" placeholder="Cost to Take Food" />
+              </div>
             </div>
-            <div>
-              <label className="form-label">Hero Subheadline</label>
-              <input type="text" value={pages.heroSub}
-                onChange={e => update('heroSub', e.target.value)}
-                className="form-input" />
+          </div>
+        </details>
+
+        {/* ── MISSION STATEMENT ──────────────────────────────────────── */}
+        <details className="card" open>
+          <summary className="font-bold text-gray-900 cursor-pointer select-none flex items-center gap-2 text-base">
+            🌱 Mission Statement
+          </summary>
+          <div className="mt-5 space-y-4">
+            <Field label="Mission Section Title" k="missionTitle" placeholder="Our Mission" />
+            <Field label="Mission Body Text" k="missionBody" type="textarea" rows={5}
+              placeholder="The Community Fridge Project believes that no one should go hungry..." />
+          </div>
+        </details>
+
+        {/* ── ABOUT PAGE ─────────────────────────────────────────────── */}
+        <details className="card">
+          <summary className="font-bold text-gray-900 cursor-pointer select-none flex items-center gap-2 text-base">
+            👥 About Us Page
+          </summary>
+          <div className="mt-5 space-y-4">
+            <Field label="Page Intro (below 'Who We Are' banner)" k="teamIntro" type="textarea" rows={3} />
+            <Field label="Our Story — Section Title" k="ourStoryTitle" placeholder="How It Started" />
+            <Field label="Our Story — Paragraph 1" k="ourStoryBody1" type="textarea" rows={4} />
+            <Field label="Our Story — Paragraph 2" k="ourStoryBody2" type="textarea" rows={4} />
+            <div className="border-t border-gray-100 pt-4">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Founder / Lead Organizer Card</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Field label="Founder Name" k="founderName" placeholder="Karen" />
+                <Field label="Founder Role" k="founderRole" placeholder="Founder & Lead Organizer" />
+              </div>
+              <Field label="Founder Bio" k="founderBio" type="textarea" rows={4} />
             </div>
           </div>
-        </div>
-        <div className="card">
-          <h3 className="font-bold text-gray-900 mb-4">🌱 Mission Statement</h3>
-          <div>
-            <label className="form-label">Mission Body Text</label>
-            <textarea rows={5} value={pages.missionBody}
-              onChange={e => update('missionBody', e.target.value)}
-              className="form-input resize-none" />
+        </details>
+
+        {/* ── DONATE PAGE ────────────────────────────────────────────── */}
+        <details className="card">
+          <summary className="font-bold text-gray-900 cursor-pointer select-none flex items-center gap-2 text-base">
+            💚 Donate Page
+          </summary>
+          <div className="mt-5 space-y-4">
+            <Field label="Page Headline" k="donateHeadline" placeholder="Support the Community Fridge Project" />
+            <Field label="Intro Paragraph" k="donateIntro" type="textarea" rows={4} />
+            <Field label="Food Drop-Off Note" k="dropoffNote" type="textarea" rows={2}
+              placeholder="Drop off at any of our 5 fridge locations..." />
           </div>
-        </div>
-        <div className="card">
-          <h3 className="font-bold text-gray-900 mb-4">💚 Donate Page Intro</h3>
-          <div>
-            <label className="form-label">Intro Paragraph</label>
-            <textarea rows={4} value={pages.donateIntro}
-              onChange={e => update('donateIntro', e.target.value)}
-              className="form-input resize-none" />
+        </details>
+
+        {/* ── CONTACT PAGE ───────────────────────────────────────────── */}
+        <details className="card">
+          <summary className="font-bold text-gray-900 cursor-pointer select-none flex items-center gap-2 text-base">
+            ✉️ Contact Page
+          </summary>
+          <div className="mt-5 space-y-4">
+            <Field label="Page Headline" k="contactHeadline" placeholder="Get in Touch" />
+            <Field label="Intro Paragraph" k="contactIntro" type="textarea" rows={3} />
+            <Field label="Email Address" k="contactEmail" placeholder="hello@communityfridgeproject.org" />
+            <Field label="Response Time Note" k="contactResponse"
+              placeholder="We typically respond within 2 business days." />
           </div>
-        </div>
+        </details>
+
       </div>
     </div>
   )
@@ -514,7 +736,7 @@ export default function Admin() {
   const [content, setContent] = useState(loadContent)
   const [saveBanner, setBanner] = useState(false)
 
-  // Auto-save to localStorage whenever content changes
+  // Auto-save + broadcast to useContent() hooks on every content change
   useEffect(() => {
     saveContent(content)
     setBanner(true)
@@ -539,15 +761,16 @@ export default function Admin() {
         {/* Auto-save banner */}
         {saveBanner && (
           <div className="fixed top-4 right-4 z-50 bg-brand-600 text-white text-sm
-                          px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 animate-fade-in-up">
+                          px-4 py-2 rounded-lg shadow-lg flex items-center gap-2">
             <CheckCircle size={14} /> Changes saved
           </div>
         )}
 
-        {activeTab === 'dashboard' && <DashboardTab content={content} />}
-        {activeTab === 'news'      && <NewsTab content={content} onChange={setContent} />}
-        {activeTab === 'slots'     && <SlotsTab content={content} onChange={setContent} />}
-        {activeTab === 'pages'     && <PagesTab content={content} onChange={setContent} />}
+        {activeTab === 'dashboard' && <DashboardTab content={content} onTab={setTab} />}
+        {activeTab === 'news'      && <NewsTab      content={content} onChange={setContent} />}
+        {activeTab === 'slots'     && <SlotsTab     content={content} onChange={setContent} />}
+        {activeTab === 'fridges'   && <FridgesTab   content={content} onChange={setContent} />}
+        {activeTab === 'pages'     && <PagesTab     content={content} onChange={setContent} />}
       </main>
     </div>
   )

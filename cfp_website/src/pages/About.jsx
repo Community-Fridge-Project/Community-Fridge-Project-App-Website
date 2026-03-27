@@ -1,8 +1,11 @@
 import { Link } from 'react-router-dom'
-import { MapPin, Users, Calendar } from 'lucide-react'
-import { TEAM, FRIDGE_LOCATIONS, BRAND } from '../config/site.config'
+import { MapPin, Users, Calendar, ExternalLink } from 'lucide-react'
+import { TEAM } from '../config/site.config'
+import { useContent } from '../hooks/useContent'
 
 export default function About() {
+  const { pages, fridges } = useContent()
+
   return (
     <>
       {/* ── PAGE HEADER ─────────────────────────────────────────────── */}
@@ -13,7 +16,7 @@ export default function About() {
           </span>
           <h1 className="text-white mb-4">About Us</h1>
           <p className="text-brand-100 text-xl max-w-2xl">
-            {TEAM.intro}
+            {pages.teamIntro}
           </p>
         </div>
       </section>
@@ -23,17 +26,12 @@ export default function About() {
         <div className="section-container">
           <div className="max-w-3xl mx-auto">
             <span className="badge-green mb-4">Our Story</span>
-            <h2 className="mb-6">How It Started</h2>
+            <h2 className="mb-6">{pages.ourStoryTitle}</h2>
             <p className="text-lg text-gray-600 leading-relaxed mb-4">
-              The Community Fridge Project began with a simple belief: no one in Austin should go
-              hungry when food is available. What started as a single refrigerator on a neighborhood
-              corner has grown into a network of six community fridges, dozens of volunteers, and
-              hundreds of neighbors served every month.
+              {pages.ourStoryBody1}
             </p>
             <p className="text-lg text-gray-600 leading-relaxed">
-              We operate on the principles of mutual aid — neighbors helping neighbors, with no
-              hierarchy, no gatekeeping, and no judgment. Our fridges are open to everyone,
-              always free, and stocked daily by community members just like you.
+              {pages.ourStoryBody2}
             </p>
           </div>
         </div>
@@ -48,19 +46,18 @@ export default function About() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto mb-12">
-            {TEAM.organizers.map((person, i) => (
-              <div key={i} className="card flex gap-5 items-start">
-                <div className="w-16 h-16 bg-brand-100 rounded-full flex items-center
-                                justify-center flex-shrink-0 text-3xl">
-                  👤
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-gray-900 mb-0.5">{person.name}</h3>
-                  <p className="text-brand-600 text-sm font-semibold mb-3">{person.role}</p>
-                  <p className="text-gray-600 text-sm leading-relaxed">{person.bio}</p>
-                </div>
+            {/* Founder card — CMS-editable */}
+            <div className="card flex gap-5 items-start">
+              <div className="w-16 h-16 bg-brand-100 rounded-full flex items-center
+                              justify-center flex-shrink-0 text-3xl">
+                👤
               </div>
-            ))}
+              <div>
+                <h3 className="text-lg font-bold text-gray-900 mb-0.5">{pages.founderName}</h3>
+                <p className="text-brand-600 text-sm font-semibold mb-3">{pages.founderRole}</p>
+                <p className="text-gray-600 text-sm leading-relaxed">{pages.founderBio}</p>
+              </div>
+            </div>
 
             {/* Advisory team card */}
             <div className="card flex gap-5 items-start">
@@ -94,30 +91,40 @@ export default function About() {
             <span className="badge-green mb-4">Find a Fridge</span>
             <h2 id="locations-heading">Our Fridge Network</h2>
             <p className="text-gray-500 mt-3 text-lg">
-              {FRIDGE_LOCATIONS.length} community fridges across Austin — and growing.
+              {fridges.length} community fridge{fridges.length !== 1 ? 's' : ''} across Oak Park &amp; Austin Chicago — and growing.
             </p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
-            {FRIDGE_LOCATIONS.map((loc) => (
-              <div key={loc.id} className="card hover:border-brand-200">
+            {fridges.map((loc) => (
+              <div key={loc.id} className="card hover:border-brand-200 transition-all">
                 <div className="flex items-start gap-3">
                   <div className="w-10 h-10 bg-brand-100 rounded-lg flex items-center
                                   justify-center flex-shrink-0">
                     <MapPin size={20} className="text-brand-600" />
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <h4 className="font-bold text-gray-900">{loc.name}</h4>
                     <p className="text-sm text-brand-600 font-medium">{loc.neighborhood}</p>
-                    <p className="text-xs text-gray-400 mt-1">{loc.address}</p>
-                    <span className="badge-green text-xs mt-2 inline-block">Open 24/7</span>
+                    <p className="text-xs text-gray-500 mt-1">{loc.address}</p>
+                    <div className="flex items-center gap-3 mt-2 flex-wrap">
+                      <span className="badge-green text-xs">Open 24/7</span>
+                      {loc.mapsUrl && (
+                        <a
+                          href={loc.mapsUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-blue-600 hover:text-blue-800 font-semibold
+                                     flex items-center gap-1 transition-colors"
+                        >
+                          <ExternalLink size={11} /> Get Directions
+                        </a>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
             ))}
           </div>
-          <p className="text-center text-sm text-gray-400 mt-8">
-            📍 Detailed addresses coming soon. Contact us if you need directions.
-          </p>
         </div>
       </section>
 

@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import { Mail, MessageSquare, Clock, CheckCircle } from 'lucide-react'
-import { CONTACT, BRAND } from '../config/site.config'
+import { useContent } from '../hooks/useContent'
 
 export default function Contact() {
+  const { pages } = useContent()
+
   const [submitted, setSubmitted] = useState(false)
   const [form, setForm] = useState({
     name: '', email: '', subject: '', message: '', type: 'general',
@@ -36,9 +38,9 @@ export default function Contact() {
           <span className="badge-green bg-white/20 text-white border border-white/30 mb-4 block w-fit">
             Reach Out
           </span>
-          <h1 className="text-white mb-4">{CONTACT.headline}</h1>
+          <h1 className="text-white mb-4">{pages.contactHeadline}</h1>
           <p className="text-brand-100 text-xl max-w-2xl">
-            {CONTACT.intro}
+            {pages.contactIntro}
           </p>
         </div>
       </section>
@@ -58,10 +60,10 @@ export default function Contact() {
                   <h3 className="font-bold text-gray-900">Email Us</h3>
                 </div>
                 <a
-                  href={`mailto:${CONTACT.email}`}
+                  href={`mailto:${pages.contactEmail}`}
                   className="text-brand-600 hover:text-brand-700 font-medium text-sm transition-colors"
                 >
-                  {CONTACT.email}
+                  {pages.contactEmail}
                 </a>
               </div>
 
@@ -72,7 +74,7 @@ export default function Contact() {
                   </div>
                   <h3 className="font-bold text-gray-900">Response Time</h3>
                 </div>
-                <p className="text-gray-600 text-sm">{CONTACT.responseTime}</p>
+                <p className="text-gray-600 text-sm">{pages.contactResponse}</p>
               </div>
 
               <div className="card">
@@ -109,7 +111,6 @@ export default function Contact() {
                 <form onSubmit={handleSubmit} className="card space-y-6" noValidate>
                   <h2 className="text-2xl font-bold text-gray-900">Send a Message</h2>
 
-                  {/* Name + Email */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                     <div>
                       <label htmlFor="name" className="form-label">Full Name *</label>
@@ -131,7 +132,6 @@ export default function Contact() {
                     </div>
                   </div>
 
-                  {/* Inquiry type */}
                   <div>
                     <label htmlFor="type" className="form-label">Type of Inquiry</label>
                     <select
@@ -145,7 +145,6 @@ export default function Contact() {
                     </select>
                   </div>
 
-                  {/* Subject */}
                   <div>
                     <label htmlFor="subject" className="form-label">Subject *</label>
                     <input
@@ -156,7 +155,6 @@ export default function Contact() {
                     />
                   </div>
 
-                  {/* Message */}
                   <div>
                     <label htmlFor="message" className="form-label">Message *</label>
                     <textarea
