@@ -17,6 +17,7 @@ import {
   AlertTriangle, ArrowLeft, Settings, MapPin, RefreshCw,
   ExternalLink, Image, Upload, GripVertical,
   Mail, Phone, Search, Copy, Download, Filter,
+  Calendar, Check,
 } from 'lucide-react'
 import {
   ADMIN_CONFIG, VOLUNTEER_SLOTS, DEFAULT_NEWS, FRIDGE_LOCATIONS,
@@ -57,6 +58,36 @@ function saveContent(content) {
 
 function generateId() {
   return Date.now() + Math.random().toString(36).slice(2)
+}
+
+// ─── SCHEDULING HELPERS ───────────────────────────────────────────────────────
+// Day-of-week → offset from Monday (0 = Mon, 6 = Sun)
+const DAY_TO_OFFSET = {
+  Monday: 0, Tuesday: 1, Wednesday: 2,
+  Thursday: 3, Friday: 4, Saturday: 5, Sunday: 6,
+}
+
+// Shift an ISO date string by n days (uses noon to avoid DST edge cases)
+function shiftDays(isoStr, n) {
+  const d = new Date(isoStr + 'T12:00:00')
+  d.setDate(d.getDate() + n)
+  return d.toISOString().split('T')[0]
+}
+
+// Format a week range label: "Apr 14 – Apr 20"
+function fmtWeekRange(mondayIso) {
+  const opts = { month: 'short', day: 'numeric' }
+  const mon = new Date(mondayIso + 'T12:00:00')
+  const sun = new Date(shiftDays(mondayIso, 6) + 'T12:00:00')
+  return `${mon.toLocaleDateString('en-US', opts)} – ${sun.toLocaleDateString('en-US', opts)}`
+}
+
+// Return the ISO date string for the Monday of the week containing `date`
+function getMondayISO(date) {
+  const d = new Date(date)
+  const day = d.getDay() // 0=Sun
+  d.setDate(d.getDate() - (day === 0 ? 6 : day - 1))
+  return d.toISOString().split('T')[0]
 }
 
 // ─── HAND-DRAWN HEART (admin sidebar) ─────────────────────────────────────────
@@ -138,6 +169,7 @@ const ADMIN_TABS = [
   { id: 'dashboard', label: 'Dashboard',         icon: BarChart2 },
   { id: 'members',   label: 'Members',           icon: Users },
   { id: 'lists',     label: 'Contact Lists',     icon: Mail },
+  { id: 'schedule',  label: 'Scheduling',        icon: Calendar },
   { id: 'news',      label: 'News & Events',     icon: Newspaper },
   { id: 'slots',     label: 'Volunteer Slots',   icon: Filter },
   { id: 'fridges',   label: 'Fridge Locations',  icon: MapPin },
@@ -227,7 +259,7 @@ function DashboardTab({ content, onTab }) {
           { label: 'Published Articles', value: published,   icon: '📰', tab: 'news' },
           { label: 'Upcoming Events',    value: events,      icon: '📅', tab: 'news' },
           { label: 'Active Members',     value: memberCount, icon: '👥', tab: 'members' },
-          { label: 'Slots Needing Help', value: slotsOpen,   icon: '🚨', tab: 'slots' },
+          { label: 'Slots Needing Help', value: slotsOpen,   icon: '🚨', tab: 'schedule' },
         ].map((stat, i) => (
           <button
             key={i}
@@ -249,6 +281,10 @@ function DashboardTab({ content, onTab }) {
           <div className="flex items-start gap-2">
             <span className="mt-0.5 flex-shrink-0">👥</span>
             <span><strong>Members</strong> — Add, edit, or remove members. Update roles and skill tags. Syncs to Supabase.</span>
+          </div>
+          <div className="flex items-start gap-2">
+            <span className="mt-0.5 flex-shrink-0">📅</span>
+            <span><strong>Scheduling</strong> — Drag volunteers into weekly activity slots. Toggle confirmed status and get outreach prompts for unconfirmed volunteers.</span>
           </div>
           <div className="flex items-start gap-2">
             <span className="mt-0.5 flex-shrink-0">📋</span>
@@ -1402,6 +1438,479 @@ function PagesTab({ content, onChange }) {
   )
 }
 
+// ─── SCHEDULING TAB ───────────────────────────────────────────────────────────
+function SchedulingTab() {
+  const [weekStr,    setWeekStr]    = useState(() => getMondayISO(new Date()))
+  const [volunteers, setVolunteers] = useState([])
+  const [panels,     setPanels]     = useState([])
+  const [loading,    setLoading]    = useState(true)
+  const [filterTag,  setFilterTag]  = useState('all')
+  const [refreshKey, setRefreshKey] = useState(0)
+  const [banner,     setBanner]     = useState('')
+
+  const weekEndStr = shiftDays(weekStr, 6)
+  const flash = (msg) => { setBanner(msg); setTimeout(() => setBanner(''), 2500) }
+
+  // Load volunteers + initiatives + auto-created events for the selected week
+  useEffect(() => {
+    let cancelled = false
+
+    const load = async () => {
+      setLoading(true)
+
+      // Parallel: active volunteers and recurring initiatives
+      const [{ data: vols }, { data: inits }] = await Promise.all([
+        supabase.from('vw_volunteer_skills').select('*').eq('is_active', true).order('name'),
+        supabase.from('initiatives')
+          .select('*').eq('is_active', true).eq('is_recurring', true).order('id'),
+      ])
+      if (cancelled) return
+      setVolunteers(vols ?? [])
+      if (!inits?.length) { setLoading(false); return }
+
+      const initIds = inits.map(i => i.id)
+
+      // Fetch events that already exist for this week
+      const { data: existingEvts } = await supabase
+        .from('events')
+        .select('id, initiative_id, event_date, status')
+        .gte('event_date', weekStr)
+        .lte('event_date', weekEndStr)
+        .in('initiative_id', initIds)
+      if (cancelled) return
+
+      // Map initiative_id → event
+      const evtByInit = {}
+      ;(existingEvts ?? []).forEach(e => { evtByInit[e.initiative_id] = e })
+
+      // Auto-create events for recurring initiatives that don't have one this week
+      const toCreate = inits
+        .filter(i => i.day_of_week && !evtByInit[i.id])
+        .map(i => ({
+          initiative_id: i.id,
+          event_date:    shiftDays(weekStr, DAY_TO_OFFSET[i.day_of_week] ?? 0),
+          status:        'open',
+        }))
+
+      if (toCreate.length) {
+        const { data: created } = await supabase
+          .from('events').insert(toCreate).select('id, initiative_id, event_date, status')
+        if (cancelled) return
+        ;(created ?? []).forEach(e => { evtByInit[e.initiative_id] = e })
+      }
+
+      // Fetch all signups for this week's events
+      const allEvtIds = Object.values(evtByInit).map(e => e?.id).filter(Boolean)
+      const signupsByEvt = {}
+
+      if (allEvtIds.length) {
+        const { data: signups } = await supabase
+          .from('event_signups')
+          .select(`
+            id, event_id, volunteer_id, confirmed, status, skill_tag,
+            volunteer:volunteers(id, name, email, phone)
+          `)
+          .in('event_id', allEvtIds)
+          .eq('status', 'active')
+        if (cancelled) return
+        ;(signups ?? []).forEach(s => {
+          if (!signupsByEvt[s.event_id]) signupsByEvt[s.event_id] = []
+          signupsByEvt[s.event_id].push(s)
+        })
+      }
+
+      const built = inits.map(init => ({
+        initiative: init,
+        event:      evtByInit[init.id] ?? null,
+        signups:    evtByInit[init.id] ? (signupsByEvt[evtByInit[init.id].id] ?? []) : [],
+      }))
+
+      if (!cancelled) { setPanels(built); setLoading(false) }
+    }
+
+    load()
+    return () => { cancelled = true }
+  }, [weekStr, refreshKey]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Mutations ─────────────────────────────────────────────────────────────
+  const handleAssign = async (eventId, volunteerId) => {
+    const panel = panels.find(p => p.event?.id === eventId)
+    if (!panel) return
+    if (panel.signups.some(s => s.volunteer_id === volunteerId)) {
+      flash('Volunteer is already assigned to this activity.')
+      return
+    }
+    const maxSeats = panel.initiative.max_seats ?? panel.initiative.optimal_seats
+    if (panel.signups.length >= maxSeats) {
+      flash('This activity is already at maximum capacity.')
+      return
+    }
+
+    const { data, error } = await supabase
+      .from('event_signups')
+      .insert({ event_id: eventId, volunteer_id: volunteerId, status: 'active', confirmed: false })
+      .select(`
+        id, event_id, volunteer_id, confirmed, status, skill_tag,
+        volunteer:volunteers(id, name, email, phone)
+      `)
+      .single()
+
+    if (error) { flash('Error assigning volunteer: ' + error.message); return }
+
+    const volName = volunteers.find(v => v.id === volunteerId)?.name ?? 'Volunteer'
+    setPanels(prev => prev.map(p =>
+      p.event?.id === eventId ? { ...p, signups: [...p.signups, data] } : p
+    ))
+    flash(`${volName} assigned!`)
+  }
+
+  const handleRemove = async (eventId, signupId, volName) => {
+    const { error } = await supabase.from('event_signups').delete().eq('id', signupId)
+    if (error) { flash('Error removing: ' + error.message); return }
+    setPanels(prev => prev.map(p =>
+      p.event?.id === eventId
+        ? { ...p, signups: p.signups.filter(s => s.id !== signupId) }
+        : p
+    ))
+    flash(`${volName} removed.`)
+  }
+
+  const handleToggleConfirm = async (eventId, signup) => {
+    const next = !signup.confirmed
+    const { error } = await supabase
+      .from('event_signups').update({ confirmed: next }).eq('id', signup.id)
+    if (error) { flash('Error updating confirmation: ' + error.message); return }
+    setPanels(prev => prev.map(p =>
+      p.event?.id === eventId
+        ? { ...p, signups: p.signups.map(s => s.id === signup.id ? { ...s, confirmed: next } : s) }
+        : p
+    ))
+  }
+
+  // ── Derived ───────────────────────────────────────────────────────────────
+  const filteredVols = filterTag === 'all'
+    ? volunteers
+    : volunteers.filter(v => (v.skills ?? '').split(',').includes(filterTag))
+
+  // Summary counts for the header
+  const totalAssigned  = panels.reduce((n, p) => n + p.signups.length, 0)
+  const totalConfirmed = panels.reduce((n, p) => n + p.signups.filter(s => s.confirmed).length, 0)
+  const slotsNeeded    = panels.reduce((n, p) =>
+    n + Math.max(0, p.initiative.optimal_seats - p.signups.length), 0)
+
+  // ── Render ────────────────────────────────────────────────────────────────
+  return (
+    <div>
+      {/* Toast banner */}
+      {banner && (
+        <div className={`fixed top-4 right-4 z-50 text-white text-sm px-4 py-2 rounded-lg
+                         shadow-lg flex items-center gap-2
+                         ${banner.startsWith('Error') ? 'bg-red-500' : 'bg-brand-600'}`}>
+          <CheckCircle size={14} /> {banner}
+        </div>
+      )}
+
+      {/* ── Page header ─────────────────────────────────────────────── */}
+      <div className="flex items-center justify-between mb-2">
+        <h2 className="text-2xl font-bold text-gray-900">Volunteer Scheduling</h2>
+        <button onClick={() => setRefreshKey(k => k + 1)}
+          className="btn-secondary text-sm px-3 py-2 flex items-center gap-1.5">
+          <RefreshCw size={13} /> Refresh
+        </button>
+      </div>
+      <p className="text-gray-500 text-sm mb-5">
+        Drag a volunteer from the left roster into an activity slot.
+        Click the circle on a chip to toggle confirmed status.
+        Unconfirmed volunteers surface in the outreach section below each panel.
+      </p>
+
+      {/* ── Week navigation ─────────────────────────────────────────── */}
+      <div className="flex items-center gap-2 mb-5 flex-wrap">
+        <button onClick={() => setWeekStr(s => shiftDays(s, -7))}
+          className="btn-secondary text-sm px-3 py-2">← Prev</button>
+        <span className="font-bold text-gray-800 text-sm min-w-[210px] text-center px-2">
+          Week of {fmtWeekRange(weekStr)}
+        </span>
+        <button onClick={() => setWeekStr(s => shiftDays(s, 7))}
+          className="btn-secondary text-sm px-3 py-2">Next →</button>
+        <button onClick={() => setWeekStr(getMondayISO(new Date()))}
+          className="btn-secondary text-sm px-3 py-2 ml-1">This Week</button>
+
+        {/* Quick summary pills */}
+        {!loading && (
+          <div className="flex items-center gap-2 ml-auto flex-wrap">
+            <span className="text-xs bg-brand-100 text-brand-700 px-2.5 py-1 rounded-full font-semibold">
+              {totalAssigned} assigned
+            </span>
+            <span className="text-xs bg-green-100 text-green-700 px-2.5 py-1 rounded-full font-semibold">
+              {totalConfirmed} confirmed
+            </span>
+            {slotsNeeded > 0 && (
+              <span className="text-xs bg-red-100 text-red-700 px-2.5 py-1 rounded-full font-semibold">
+                {slotsNeeded} slots needed
+              </span>
+            )}
+          </div>
+        )}
+      </div>
+
+      {loading ? (
+        <p className="text-gray-400 text-sm text-center py-20">Loading schedule…</p>
+      ) : (
+        <div className="flex gap-6 items-start">
+
+          {/* ══ Left: volunteer roster ════════════════════════════════ */}
+          <div className="w-52 flex-shrink-0 sticky top-4">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs font-bold text-gray-700 uppercase tracking-wide">Roster</p>
+              <span className="text-xs text-gray-400 font-mono tabular-nums">
+                {filteredVols.length}/{volunteers.length}
+              </span>
+            </div>
+
+            {/* Skill filter */}
+            <select value={filterTag} onChange={e => setFilterTag(e.target.value)}
+              className="form-input text-xs py-1.5 mb-3">
+              <option value="all">All skills</option>
+              {Object.entries(ALL_SKILL_TAGS).map(([k, v]) => (
+                <option key={k} value={k}>{v}</option>
+              ))}
+            </select>
+
+            {/* Draggable volunteer cards */}
+            <div className="space-y-1.5 max-h-[70vh] overflow-y-auto pr-0.5">
+              {filteredVols.map(v => {
+                const tags = (v.skills ?? '').split(',').filter(Boolean)
+                return (
+                  <div key={v.id}
+                    draggable
+                    onDragStart={e => {
+                      e.dataTransfer.setData('volunteerId', String(v.id))
+                      e.dataTransfer.effectAllowed = 'copy'
+                    }}
+                    className="p-2.5 rounded-lg border border-gray-200 bg-white
+                               cursor-grab active:cursor-grabbing
+                               hover:border-brand-400 hover:shadow-sm
+                               transition-all select-none"
+                  >
+                    <p className="text-sm font-semibold text-gray-900 truncate leading-tight">
+                      {v.name}
+                    </p>
+                    {tags.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {tags.slice(0, 2).map(t => (
+                          <span key={t}
+                            className="text-xs bg-brand-50 text-brand-700 px-1.5 py-0.5 rounded-full leading-none">
+                            {/* Strip leading emoji */}
+                            {ALL_SKILL_TAGS[t]?.replace(/^\S+\s/, '') ?? t}
+                          </span>
+                        ))}
+                        {tags.length > 2 && (
+                          <span className="text-xs text-gray-400">+{tags.length - 2}</span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+              {filteredVols.length === 0 && (
+                <p className="text-xs text-gray-400 text-center py-4">
+                  No volunteers match this skill filter.
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* ══ Right: activity panels ════════════════════════════════ */}
+          <div className="flex-1 space-y-4 min-w-0">
+            {panels.length === 0 && (
+              <p className="text-gray-400 text-sm text-center py-10">
+                No recurring activities found. Add initiatives in the database to get started.
+              </p>
+            )}
+
+            {panels.map(({ initiative: init, event, signups }) => {
+              const filled     = signups.length
+              const optimal    = init.optimal_seats
+              const maxSeats   = init.max_seats ?? optimal
+              const pct        = filled / optimal
+              const isFull     = filled >= maxSeats
+              const confirmed  = signups.filter(s => s.confirmed)
+              const unconfirmed = signups.filter(s => !s.confirmed)
+
+              // Color scheme based on fill level
+              const sc = isFull
+                ? { border: 'border-green-300',  bg: 'bg-green-50/40',   hdr: 'bg-green-100/70',   badge: 'bg-green-200 text-green-800',   label: 'Filled' }
+                : pct >= 0.6
+                ? { border: 'border-yellow-300', bg: 'bg-yellow-50/40',  hdr: 'bg-yellow-100/70',  badge: 'bg-yellow-200 text-yellow-800', label: 'Almost Full' }
+                : { border: 'border-red-200',    bg: 'bg-red-50/30',     hdr: 'bg-red-100/60',     badge: 'bg-red-200 text-red-800',       label: 'Needs Volunteers' }
+
+              return (
+                <div key={init.id}
+                  className={`rounded-xl border-2 transition-colors ${sc.border} ${sc.bg}`}>
+
+                  {/* Panel header */}
+                  <div className={`px-4 py-3 rounded-t-xl flex items-start justify-between gap-3 ${sc.hdr}`}>
+                    <div className="min-w-0">
+                      <p className="font-bold text-gray-900 text-sm leading-tight">{init.name}</p>
+                      <p className="text-xs text-gray-500 mt-0.5 flex items-center gap-2 flex-wrap">
+                        <span>{init.day_of_week ?? 'One-time'}</span>
+                        <span className="text-gray-300">·</span>
+                        <span>{filled}/{optimal} optimal · max {maxSeats}</span>
+                        {confirmed.length > 0 && (
+                          <span className="text-green-700 font-semibold flex items-center gap-1">
+                            <Check size={10} /> {confirmed.length} confirmed
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0 mt-0.5">
+                      {unconfirmed.length > 0 && (
+                        <span className="text-xs bg-yellow-200 text-yellow-800 px-2 py-0.5 rounded-full font-semibold whitespace-nowrap">
+                          {unconfirmed.length} unconfirmed
+                        </span>
+                      )}
+                      <span className={`text-xs font-bold px-2.5 py-1 rounded-full whitespace-nowrap ${sc.badge}`}>
+                        {sc.label}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Slots body */}
+                  <div className="p-4">
+                    <div className="flex flex-wrap gap-2 min-h-[44px] items-start">
+
+                      {/* Assigned volunteer chips */}
+                      {signups.map(s => (
+                        <div key={s.id}
+                          className={`inline-flex items-center gap-1.5 pl-1.5 pr-2 py-1 rounded-full
+                                      text-xs font-semibold border transition-all ${
+                            s.confirmed
+                              ? 'bg-green-100 border-green-300 text-green-800'
+                              : 'bg-white border-gray-300 text-gray-700'
+                          }`}
+                        >
+                          {/* Confirmation toggle */}
+                          <button
+                            onClick={() => handleToggleConfirm(event.id, s)}
+                            title={s.confirmed ? 'Mark as not confirmed' : 'Mark as confirmed'}
+                            className={`w-4 h-4 rounded-full border-2 flex items-center justify-center
+                                        flex-shrink-0 transition-all ${
+                              s.confirmed
+                                ? 'bg-green-500 border-green-500 text-white'
+                                : 'border-gray-300 hover:border-brand-500 bg-white'
+                            }`}
+                          >
+                            {s.confirmed && <Check size={9} strokeWidth={3} />}
+                          </button>
+
+                          {/* Name */}
+                          <span className="truncate max-w-[110px]">
+                            {s.volunteer?.name ?? 'Unknown'}
+                          </span>
+
+                          {/* Quick-contact icons */}
+                          {s.volunteer?.phone && (
+                            <a href={`tel:${s.volunteer.phone}`}
+                              title={`Call ${s.volunteer.name}`}
+                              onClick={e => e.stopPropagation()}
+                              className="text-gray-400 hover:text-brand-600 transition-colors flex-shrink-0">
+                              <Phone size={10} />
+                            </a>
+                          )}
+                          {s.volunteer?.email && (
+                            <a href={`mailto:${s.volunteer.email}`}
+                              title={`Email ${s.volunteer.name}`}
+                              onClick={e => e.stopPropagation()}
+                              className="text-gray-400 hover:text-brand-600 transition-colors flex-shrink-0">
+                              <Mail size={10} />
+                            </a>
+                          )}
+
+                          {/* Remove */}
+                          <button
+                            onClick={() => handleRemove(event.id, s.id, s.volunteer?.name ?? 'Volunteer')}
+                            title="Remove from slot"
+                            className="text-gray-300 hover:text-red-500 transition-colors flex-shrink-0 ml-0.5">
+                            <Trash2 size={10} />
+                          </button>
+                        </div>
+                      ))}
+
+                      {/* Drop zone — hidden when at max capacity */}
+                      {!isFull && event && (
+                        <div
+                          onDragOver={e => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy' }}
+                          onDragEnter={e => {
+                            e.preventDefault()
+                            e.currentTarget.classList.add('border-brand-400', 'bg-brand-50', 'text-brand-600')
+                          }}
+                          onDragLeave={e => {
+                            e.currentTarget.classList.remove('border-brand-400', 'bg-brand-50', 'text-brand-600')
+                          }}
+                          onDrop={e => {
+                            e.currentTarget.classList.remove('border-brand-400', 'bg-brand-50', 'text-brand-600')
+                            const vid = parseInt(e.dataTransfer.getData('volunteerId'), 10)
+                            if (vid) handleAssign(event.id, vid)
+                          }}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full
+                                     text-xs border-2 border-dashed border-gray-300 text-gray-400
+                                     transition-all cursor-copy select-none"
+                        >
+                          <Plus size={11} /> Drop volunteer here
+                        </div>
+                      )}
+                      {!event && (
+                        <span className="text-xs text-gray-400 italic self-center">
+                          No event generated yet for this week
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Outreach section — unconfirmed volunteers */}
+                    {unconfirmed.length > 0 && (
+                      <div className="mt-3 p-3 rounded-lg bg-amber-50 border border-amber-200">
+                        <p className="text-xs font-bold text-amber-800 mb-2 flex items-center gap-1">
+                          <AlertTriangle size={12} />
+                          Outreach needed — {unconfirmed.length} volunteer{unconfirmed.length !== 1 ? 's' : ''} not yet confirmed
+                        </p>
+                        <div className="flex flex-wrap gap-x-5 gap-y-2">
+                          {unconfirmed.map(s => (
+                            <div key={s.id} className="flex items-center gap-1.5 text-xs">
+                              <span className="font-semibold text-gray-800">
+                                {s.volunteer?.name}
+                              </span>
+                              {s.volunteer?.phone && (
+                                <a href={`tel:${s.volunteer.phone}`}
+                                  className="inline-flex items-center gap-1 bg-amber-200 text-amber-900
+                                             px-2 py-0.5 rounded-full hover:bg-amber-300 transition-colors">
+                                  <Phone size={10} /> {s.volunteer.phone}
+                                </a>
+                              )}
+                              {s.volunteer?.email && (
+                                <a href={`mailto:${s.volunteer.email}`}
+                                  className="inline-flex items-center gap-1 bg-amber-200 text-amber-900
+                                             px-2 py-0.5 rounded-full hover:bg-amber-300 transition-colors">
+                                  <Mail size={10} /> Email
+                                </a>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── ADMIN PORTAL (main export) ───────────────────────────────────────────────
 export default function Admin() {
   const [authed, setAuthed]   = useState(
@@ -1444,6 +1953,7 @@ export default function Admin() {
         {activeTab === 'dashboard' && <DashboardTab content={content} onTab={setTab} />}
         {activeTab === 'members'   && <MembersTab />}
         {activeTab === 'lists'     && <ListsTab />}
+        {activeTab === 'schedule'  && <SchedulingTab />}
         {activeTab === 'news'      && <NewsTab      content={content} onChange={setContent} />}
         {activeTab === 'slots'     && <SlotsTab     content={content} onChange={setContent} />}
         {activeTab === 'fridges'   && <FridgesTab   content={content} onChange={setContent} />}
