@@ -16,11 +16,13 @@ import {
   Plus, Trash2, Edit3, Eye, EyeOff, Save, CheckCircle,
   AlertTriangle, ArrowLeft, Settings, MapPin, RefreshCw,
   ExternalLink, Image, Upload, GripVertical,
+  Mail, Phone, Search, Copy, Download, Filter,
 } from 'lucide-react'
 import {
   ADMIN_CONFIG, VOLUNTEER_SLOTS, DEFAULT_NEWS, FRIDGE_LOCATIONS,
 } from '../config/site.config'
 import { DEFAULT_PAGES, DEFAULT_IMAGES } from '../hooks/useContent'
+import { supabase } from '../lib/supabase'
 
 // ─── HELPERS ──────────────────────────────────────────────────────────────────
 function loadContent() {
@@ -134,8 +136,10 @@ function LoginScreen({ onLogin }) {
 // ─── NAV SIDEBAR ──────────────────────────────────────────────────────────────
 const ADMIN_TABS = [
   { id: 'dashboard', label: 'Dashboard',         icon: BarChart2 },
+  { id: 'members',   label: 'Members',           icon: Users },
+  { id: 'lists',     label: 'Contact Lists',     icon: Mail },
   { id: 'news',      label: 'News & Events',     icon: Newspaper },
-  { id: 'slots',     label: 'Volunteer Slots',   icon: Users },
+  { id: 'slots',     label: 'Volunteer Slots',   icon: Filter },
   { id: 'fridges',   label: 'Fridge Locations',  icon: MapPin },
   { id: 'images',    label: 'Page Images',        icon: Image },
   { id: 'pages',     label: 'Page Content',      icon: FileText },
@@ -205,16 +209,25 @@ function DashboardTab({ content, onTab }) {
   const published = content.news.filter(a => a.published).length
   const events    = content.news.filter(a => a.type === 'event').length
   const slotsOpen = content.slots.filter(s => s.filled < s.optimal).length
+  const [memberCount, setMemberCount] = useState('—')
+
+  useEffect(() => {
+    supabase
+      .from('volunteers')
+      .select('*', { count: 'exact', head: true })
+      .eq('is_active', true)
+      .then(({ count }) => setMemberCount(count ?? 0))
+  }, [])
 
   return (
     <div>
       <h2 className="text-2xl font-bold mb-6 text-gray-900">Dashboard</h2>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-5 mb-10">
         {[
-          { label: 'Published Articles', value: published,            icon: '📰', tab: 'news' },
-          { label: 'Upcoming Events',    value: events,               icon: '📅', tab: 'news' },
-          { label: 'Fridge Locations',   value: content.fridges.length, icon: '🧊', tab: 'fridges' },
-          { label: 'Slots Needing Help', value: slotsOpen,            icon: '🚨', tab: 'slots' },
+          { label: 'Published Articles', value: published,   icon: '📰', tab: 'news' },
+          { label: 'Upcoming Events',    value: events,      icon: '📅', tab: 'news' },
+          { label: 'Active Members',     value: memberCount, icon: '👥', tab: 'members' },
+          { label: 'Slots Needing Help', value: slotsOpen,   icon: '🚨', tab: 'slots' },
         ].map((stat, i) => (
           <button
             key={i}
@@ -234,16 +247,16 @@ function DashboardTab({ content, onTab }) {
         </h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm text-brand-700">
           <div className="flex items-start gap-2">
+            <span className="mt-0.5 flex-shrink-0">👥</span>
+            <span><strong>Members</strong> — Add, edit, or remove members. Update roles and skill tags. Syncs to Supabase.</span>
+          </div>
+          <div className="flex items-start gap-2">
+            <span className="mt-0.5 flex-shrink-0">📋</span>
+            <span><strong>Contact Lists</strong> — Filter members and copy a ready-to-paste email or phone list, or export CSV.</span>
+          </div>
+          <div className="flex items-start gap-2">
             <span className="mt-0.5 flex-shrink-0">📰</span>
             <span><strong>News &amp; Events</strong> — Post announcements and upcoming events visible on the News page.</span>
-          </div>
-          <div className="flex items-start gap-2">
-            <span className="mt-0.5 flex-shrink-0">👥</span>
-            <span><strong>Volunteer Slots</strong> — Update filled counts. Numbers appear live on the Volunteer Dashboard.</span>
-          </div>
-          <div className="flex items-start gap-2">
-            <span className="mt-0.5 flex-shrink-0">🧊</span>
-            <span><strong>Fridge Locations</strong> — Add, edit, or remove community fridges. Google Maps links included.</span>
           </div>
           <div className="flex items-start gap-2">
             <span className="mt-0.5 flex-shrink-0">📝</span>
@@ -471,6 +484,26 @@ function SlotsTab({ content, onChange }) {
   )
 }
 
+// ─── MEMBER MANAGEMENT CONSTANTS ─────────────────────────────────────────────
+const VOLUNTEER_ROLES = {
+  volunteer:    '🙋 Volunteer',
+  coordinator:  '📋 Coordinator',
+  driver:       '🚗 Driver',
+  captain:      '⭐ Site Captain',
+  advisory:     '🤝 Advisory',
+  donor_liaison:'💚 Donor Liaison',
+}
+
+const ALL_SKILL_TAGS = {
+  sack_lunch:      '🥪 Sack Lunch',
+  delivery:        '🚗 Delivery',
+  cleaning:        '🧹 Cleaning',
+  shopping:        '🛒 Shopping',
+  tovala_recovery: '♻️ Tovala Recovery',
+  stocking:        '📦 Stocking',
+  advisory:        '🤝 Advisory',
+}
+
 // ─── FRIDGE LOCATIONS TAB ─────────────────────────────────────────────────────
 const BLANK_FRIDGE = { id: null, name: '', neighborhood: '', address: '', mapsUrl: '' }
 
@@ -608,6 +641,469 @@ function FridgesTab({ content, onChange }) {
           </div>
         ))}
       </div>
+    </div>
+  )
+}
+
+// ─── MEMBERS TAB ─────────────────────────────────────────────────────────────
+const BLANK_MEMBER = {
+  name: '', email: '', phone: '', role: 'volunteer', is_active: true, notes: '', tags: [],
+}
+
+function MembersTab() {
+  const [members,    setMembers]    = useState([])
+  const [loading,    setLoading]    = useState(true)
+  const [error,      setError]      = useState(null)
+  const [editing,    setEditing]    = useState(null)  // null | 'new' | id
+  const [form,       setForm]       = useState(BLANK_MEMBER)
+  const [search,     setSearch]     = useState('')
+  const [saving,     setSaving]     = useState(false)
+  const [banner,     setBanner]     = useState('')
+
+  const fetchMembers = async () => {
+    setLoading(true); setError(null)
+    const { data, error: err } = await supabase
+      .from('vw_volunteer_skills').select('*').order('name')
+    if (err) { setError(err.message); setLoading(false); return }
+    setMembers(data ?? [])
+    setLoading(false)
+  }
+  useEffect(() => { fetchMembers() }, [])
+
+  const flash = (msg) => { setBanner(msg); setTimeout(() => setBanner(''), 2200) }
+
+  const openNew  = () => { setForm({ ...BLANK_MEMBER, tags: [] }); setEditing('new') }
+  const openEdit = (m) => {
+    setForm({
+      id:        m.id,
+      name:      m.name      ?? '',
+      email:     m.email     ?? '',
+      phone:     m.phone     ?? '',
+      role:      m.role      ?? 'volunteer',
+      is_active: m.is_active ?? true,
+      notes:     m.notes     ?? '',
+      tags:      m.skills ? m.skills.split(',').filter(Boolean) : [],
+    })
+    setEditing(m.id)
+  }
+  const closeForm = () => { setEditing(null); setForm(BLANK_MEMBER) }
+
+  const toggleTag = (tag) =>
+    setForm(f => ({
+      ...f,
+      tags: f.tags.includes(tag) ? f.tags.filter(t => t !== tag) : [...f.tags, tag],
+    }))
+
+  const handleSave = async () => {
+    if (!form.name.trim()) return
+    setSaving(true)
+    const payload = {
+      name:       form.name.trim(),
+      email:      form.email.trim()  || null,
+      phone:      form.phone.trim()  || null,
+      role:       form.role,
+      is_active:  form.is_active,
+      notes:      form.notes.trim()  || null,
+      updated_at: new Date().toISOString(),
+    }
+    let volunteerId = form.id
+
+    if (editing === 'new') {
+      const { data, error: err } = await supabase
+        .from('volunteers').insert(payload).select('id').single()
+      if (err) { flash('Error: ' + err.message); setSaving(false); return }
+      volunteerId = data.id
+    } else {
+      const { error: err } = await supabase
+        .from('volunteers').update(payload).eq('id', form.id)
+      if (err) { flash('Error: ' + err.message); setSaving(false); return }
+    }
+
+    // Sync tags: wipe then re-insert
+    await supabase.from('volunteer_tags').delete().eq('volunteer_id', volunteerId)
+    if (form.tags.length > 0) {
+      const { error: tagErr } = await supabase
+        .from('volunteer_tags')
+        .insert(form.tags.map(tag => ({ volunteer_id: volunteerId, tag })))
+      if (tagErr) flash('Saved — tag sync error: ' + tagErr.message)
+    }
+
+    await fetchMembers()
+    closeForm()
+    flash(editing === 'new' ? 'Member added!' : 'Member updated!')
+    setSaving(false)
+  }
+
+  const handleDelete = async (id, name) => {
+    if (!window.confirm(`Remove ${name}? This cannot be undone.`)) return
+    const { error: err } = await supabase.from('volunteers').delete().eq('id', id)
+    if (err) { flash('Error: ' + err.message); return }
+    await fetchMembers()
+    flash('Member removed.')
+  }
+
+  const filtered = members.filter(m => {
+    if (!search) return true
+    const q = search.toLowerCase()
+    return (
+      m.name?.toLowerCase().includes(q)  ||
+      m.email?.toLowerCase().includes(q) ||
+      m.phone?.includes(q)               ||
+      m.role?.toLowerCase().includes(q)
+    )
+  })
+
+  return (
+    <div>
+      {banner && (
+        <div className={`fixed top-4 right-4 z-50 text-white text-sm px-4 py-2 rounded-lg shadow-lg
+                         flex items-center gap-2
+                         ${banner.startsWith('Error') ? 'bg-red-500' : 'bg-brand-600'}`}>
+          <CheckCircle size={14} /> {banner}
+        </div>
+      )}
+
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-2xl font-bold text-gray-900">Members</h2>
+        <button onClick={openNew} className="btn-primary text-sm px-4 py-2">
+          <Plus size={15} /> Add Member
+        </button>
+      </div>
+
+      {/* Add / Edit form */}
+      {editing !== null && (
+        <div className="card mb-8 border-brand-300 bg-brand-50/30">
+          <h3 className="font-bold text-lg mb-5 text-gray-900">
+            {editing === 'new' ? 'Add New Member' : 'Edit Member'}
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+            <div>
+              <label className="form-label">Full Name *</label>
+              <input type="text" value={form.name} placeholder="Jane Smith"
+                onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+                className="form-input" />
+            </div>
+            <div>
+              <label className="form-label">Role</label>
+              <select value={form.role}
+                onChange={e => setForm(f => ({ ...f, role: e.target.value }))}
+                className="form-input">
+                {Object.entries(VOLUNTEER_ROLES).map(([k, v]) => (
+                  <option key={k} value={k}>{v}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="form-label">Email</label>
+              <input type="email" value={form.email} placeholder="jane@example.com"
+                onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
+                className="form-input" />
+            </div>
+            <div>
+              <label className="form-label">Phone</label>
+              <input type="tel" value={form.phone} placeholder="+1 555 000 0000"
+                onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
+                className="form-input" />
+            </div>
+          </div>
+          <div className="mb-4">
+            <label className="form-label">Notes</label>
+            <textarea rows={2} value={form.notes} placeholder="Optional notes about this member…"
+              onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
+              className="form-input resize-none" />
+          </div>
+
+          {/* Skill tags */}
+          <div className="mb-4">
+            <label className="form-label">Skill Tags</label>
+            <div className="flex flex-wrap gap-2 mt-1">
+              {Object.entries(ALL_SKILL_TAGS).map(([k, v]) => (
+                <button key={k} type="button" onClick={() => toggleTag(k)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all
+                    ${form.tags.includes(k)
+                      ? 'bg-brand-600 text-white border-brand-600'
+                      : 'bg-white text-gray-500 border-gray-300 hover:border-brand-400'}`}>
+                  {v}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Active toggle */}
+          <div className="mb-5">
+            <label className="flex items-center gap-2 cursor-pointer w-fit">
+              <input type="checkbox" checked={form.is_active}
+                onChange={e => setForm(f => ({ ...f, is_active: e.target.checked }))}
+                className="w-4 h-4 accent-brand-500" />
+              <span className="text-sm font-semibold text-gray-700">Active member</span>
+            </label>
+          </div>
+
+          <div className="flex gap-3">
+            <button onClick={handleSave} disabled={!form.name.trim() || saving}
+              className="btn-primary text-sm px-5 py-2 disabled:opacity-50">
+              <Save size={14} /> {saving ? 'Saving…' : 'Save Member'}
+            </button>
+            <button onClick={closeForm} className="btn-secondary text-sm px-5 py-2">Cancel</button>
+          </div>
+        </div>
+      )}
+
+      {/* Search bar */}
+      <div className="relative mb-5">
+        <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+        <input type="text" value={search} onChange={e => setSearch(e.target.value)}
+          placeholder="Search by name, email, phone or role…"
+          className="form-input pl-9" />
+      </div>
+
+      {/* Member list */}
+      {loading ? (
+        <p className="text-gray-400 text-sm text-center py-10">Loading members…</p>
+      ) : error ? (
+        <p className="text-red-500 text-sm text-center py-10">Error: {error}</p>
+      ) : filtered.length === 0 ? (
+        <p className="text-gray-400 text-sm text-center py-10">
+          {members.length === 0 ? 'No members yet. Add your first one!' : 'No members match your search.'}
+        </p>
+      ) : (
+        <div className="space-y-2">
+          <p className="text-xs text-gray-400 mb-1">
+            {filtered.length} member{filtered.length !== 1 ? 's' : ''}
+            {search ? ' matched' : ''}
+          </p>
+          {filtered.map(m => {
+            const tags = m.skills ? m.skills.split(',').filter(Boolean) : []
+            return (
+              <div key={m.id}
+                   className={`flex items-center justify-between p-4 rounded-xl border transition-all
+                     ${m.is_active ? 'bg-white border-gray-200' : 'bg-gray-50 border-gray-200 opacity-60'}`}>
+                <div className="min-w-0 flex-1 mr-4">
+                  <div className="flex items-center gap-2 flex-wrap mb-1">
+                    <span className="font-semibold text-gray-900 text-sm">{m.name}</span>
+                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full
+                      ${m.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-500'}`}>
+                      {m.is_active ? 'Active' : 'Inactive'}
+                    </span>
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-brand-100 text-brand-700 font-medium">
+                      {VOLUNTEER_ROLES[m.role] ?? m.role ?? 'Volunteer'}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-4 text-xs text-gray-400 mb-1.5 flex-wrap">
+                    {m.email && <span className="flex items-center gap-1"><Mail size={11} />{m.email}</span>}
+                    {m.phone && <span className="flex items-center gap-1"><Phone size={11} />{m.phone}</span>}
+                  </div>
+                  {tags.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {tags.map(t => (
+                        <span key={t} className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">
+                          {ALL_SKILL_TAGS[t] ?? t}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  <button onClick={() => openEdit(m)} title="Edit"
+                    className="p-2 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-all">
+                    <Edit3 size={16} />
+                  </button>
+                  <button onClick={() => handleDelete(m.id, m.name)} title="Delete"
+                    className="p-2 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all">
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── LISTS TAB ────────────────────────────────────────────────────────────────
+function ListsTab() {
+  const [members,     setMembers]     = useState([])
+  const [loading,     setLoading]     = useState(true)
+  const [filterRole,  setFilterRole]  = useState('all')
+  const [filterTag,   setFilterTag]   = useState('all')
+  const [filterActive,setFilterActive]= useState('active')
+  const [listType,    setListType]    = useState('email')
+  const [copied,      setCopied]      = useState(false)
+
+  useEffect(() => {
+    supabase.from('vw_volunteer_skills').select('*').order('name')
+      .then(({ data }) => { setMembers(data ?? []); setLoading(false) })
+  }, [])
+
+  const filtered = members.filter(m => {
+    if (filterActive === 'active'   && !m.is_active) return false
+    if (filterActive === 'inactive' &&  m.is_active) return false
+    if (filterRole !== 'all' && m.role !== filterRole) return false
+    if (filterTag  !== 'all') {
+      const tags = m.skills ? m.skills.split(',') : []
+      if (!tags.includes(filterTag)) return false
+    }
+    return true
+  })
+
+  const emailList = filtered.filter(m => m.email).map(m => m.email).join(', ')
+  const phoneList = filtered.filter(m => m.phone).map(m => m.phone).join('\n')
+  const activeList = listType === 'email' ? emailList : phoneList
+
+  const handleCopy = () => {
+    if (!activeList) return
+    navigator.clipboard.writeText(activeList)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1800)
+  }
+
+  const handleCSV = () => {
+    const header = 'Name,Email,Phone,Role,Tags,Active\n'
+    const rows = filtered.map(m => [
+      `"${(m.name   ?? '').replace(/"/g, '""')}"`,
+      `"${(m.email  ?? '').replace(/"/g, '""')}"`,
+      `"${(m.phone  ?? '').replace(/"/g, '""')}"`,
+      `"${(m.role   ?? '').replace(/"/g, '""')}"`,
+      `"${(m.skills ?? '').replace(/"/g, '""')}"`,
+      m.is_active ? 'Yes' : 'No',
+    ].join(',')).join('\n')
+    const blob = new Blob([header + rows], { type: 'text/csv' })
+    const url  = URL.createObjectURL(blob)
+    const a    = document.createElement('a')
+    a.href     = url
+    a.download = `cfp_members_${new Date().toISOString().split('T')[0]}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  const emailCount = filtered.filter(m => m.email).length
+  const phoneCount = filtered.filter(m => m.phone).length
+
+  return (
+    <div>
+      <h2 className="text-2xl font-bold mb-2 text-gray-900">Contact Lists</h2>
+      <p className="text-gray-500 text-sm mb-6">
+        Filter your members, then copy a ready-to-paste email or phone list — or export the full set as CSV.
+      </p>
+
+      {/* Filters */}
+      <div className="card mb-6">
+        <h3 className="font-bold text-sm text-gray-700 mb-3 flex items-center gap-2">
+          <Filter size={14} /> Filters
+        </h3>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div>
+            <label className="form-label text-xs">Status</label>
+            <select value={filterActive} onChange={e => setFilterActive(e.target.value)} className="form-input">
+              <option value="all">All members</option>
+              <option value="active">Active only</option>
+              <option value="inactive">Inactive only</option>
+            </select>
+          </div>
+          <div>
+            <label className="form-label text-xs">Role</label>
+            <select value={filterRole} onChange={e => setFilterRole(e.target.value)} className="form-input">
+              <option value="all">All roles</option>
+              {Object.entries(VOLUNTEER_ROLES).map(([k, v]) => (
+                <option key={k} value={k}>{v}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="form-label text-xs">Skill Tag</label>
+            <select value={filterTag} onChange={e => setFilterTag(e.target.value)} className="form-input">
+              <option value="all">All tags</option>
+              {Object.entries(ALL_SKILL_TAGS).map(([k, v]) => (
+                <option key={k} value={k}>{v}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {loading ? (
+        <p className="text-gray-400 text-sm py-10 text-center">Loading members…</p>
+      ) : (
+        <>
+          {/* Summary row */}
+          <p className="text-sm text-gray-500 mb-4">
+            <strong className="text-gray-900">{filtered.length}</strong>{' '}
+            member{filtered.length !== 1 ? 's' : ''} matched
+            {' · '}
+            <span className="text-brand-600 font-medium">{emailCount} email{emailCount !== 1 ? 's' : ''}</span>
+            {' · '}
+            <span className="text-brand-600 font-medium">{phoneCount} phone{phoneCount !== 1 ? 's' : ''}</span>
+          </p>
+
+          {/* Toggle + action buttons */}
+          <div className="flex items-center gap-3 mb-4 flex-wrap">
+            <div className="flex rounded-lg border border-gray-200 overflow-hidden">
+              <button onClick={() => setListType('email')}
+                className={`px-4 py-2 text-sm font-semibold flex items-center gap-2 transition-all
+                  ${listType === 'email' ? 'bg-brand-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>
+                <Mail size={14} /> Email List
+              </button>
+              <button onClick={() => setListType('phone')}
+                className={`px-4 py-2 text-sm font-semibold flex items-center gap-2 transition-all
+                  ${listType === 'phone' ? 'bg-brand-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>
+                <Phone size={14} /> Phone / Text List
+              </button>
+            </div>
+            <button onClick={handleCopy} disabled={!activeList}
+              className="btn-primary text-sm px-4 py-2 disabled:opacity-40">
+              {copied
+                ? <><CheckCircle size={14} /> Copied!</>
+                : <><Copy size={14} /> Copy List</>}
+            </button>
+            <button onClick={handleCSV} disabled={filtered.length === 0}
+              className="btn-secondary text-sm px-4 py-2 disabled:opacity-40">
+              <Download size={14} /> Download CSV
+            </button>
+          </div>
+
+          {/* Preview textarea */}
+          <textarea
+            readOnly rows={6}
+            value={activeList || (listType === 'email'
+              ? 'No email addresses for the current filter.'
+              : 'No phone numbers for the current filter.')}
+            className="form-input font-mono text-xs resize-y text-gray-700 bg-gray-50 w-full mb-6"
+          />
+
+          {/* Matched member list */}
+          {filtered.length > 0 && (
+            <div>
+              <h3 className="text-sm font-bold text-gray-700 mb-3">Matched Members</h3>
+              <div className="space-y-1.5">
+                {filtered.map(m => {
+                  const tags = m.skills ? m.skills.split(',').filter(Boolean) : []
+                  return (
+                    <div key={m.id}
+                         className="flex items-center justify-between p-3 rounded-lg border border-gray-100 bg-white text-sm">
+                      <div className="min-w-0 flex-1">
+                        <span className="font-semibold text-gray-900">{m.name}</span>
+                        <span className="ml-2 text-xs text-brand-600 font-medium">
+                          {VOLUNTEER_ROLES[m.role] ?? m.role}
+                        </span>
+                        {tags.length > 0 && (
+                          <span className="ml-2 text-xs text-gray-400">
+                            {tags.map(t => ALL_SKILL_TAGS[t] ?? t).join(' · ')}
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-xs text-gray-500 text-right flex-shrink-0 ml-3 font-mono">
+                        {listType === 'email' ? (m.email || '—') : (m.phone || '—')}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+        </>
+      )}
     </div>
   )
 }
@@ -946,6 +1442,8 @@ export default function Admin() {
         )}
 
         {activeTab === 'dashboard' && <DashboardTab content={content} onTab={setTab} />}
+        {activeTab === 'members'   && <MembersTab />}
+        {activeTab === 'lists'     && <ListsTab />}
         {activeTab === 'news'      && <NewsTab      content={content} onChange={setContent} />}
         {activeTab === 'slots'     && <SlotsTab     content={content} onChange={setContent} />}
         {activeTab === 'fridges'   && <FridgesTab   content={content} onChange={setContent} />}
