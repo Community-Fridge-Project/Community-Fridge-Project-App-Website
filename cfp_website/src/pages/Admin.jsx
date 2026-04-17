@@ -17,7 +17,7 @@ import {
   AlertTriangle, ArrowLeft, Settings, MapPin, RefreshCw,
   ExternalLink, Image, Upload, GripVertical,
   Mail, Phone, Search, Copy, Download, Filter,
-  Calendar, Check,
+  Calendar, Check, Tag, X,
 } from 'lucide-react'
 import {
   ADMIN_CONFIG, VOLUNTEER_SLOTS, DEFAULT_NEWS, FRIDGE_LOCATIONS, COMMUNITY_PARTNERS,
@@ -1457,6 +1457,8 @@ function SchedulingTab() {
     isRecurring: false, isDaily: false,
   })
   const [addBusy, setAddBusy] = useState(false)
+  const [editingVolTags, setEditingVolTags] = useState(null) // volunteer id whose tags are open
+  const [volTagDraft,    setVolTagDraft]    = useState([])   // working copy of tags
 
   const weekEndStr = shiftDays(weekStr, 6)
   const flash = msg => { setBanner(msg); setTimeout(() => setBanner(''), 2500) }
@@ -1666,6 +1668,30 @@ function SchedulingTab() {
         return { ...p, slots: p.slots.map((s, i) => i === slotIdx ? { ...s, signups: s.signups.map(sg => sg.id === signup.id ? { ...sg, confirmed: next } : sg) } : s) }
       return { ...p, signups: p.signups.map(s => s.id === signup.id ? { ...s, confirmed: next } : s) }
     }))
+  }
+
+  // Open inline tag editor for a volunteer in the roster
+  const openVolTagEditor = (vol, e) => {
+    e.stopPropagation()
+    setVolTagDraft((vol.skills ?? '').split(',').filter(Boolean))
+    setEditingVolTags(vol.id)
+  }
+
+  // Save updated tags for a roster volunteer
+  const handleSaveVolTags = async (volunteerId) => {
+    const { error: delErr } = await supabase.from('volunteer_tags').delete().eq('volunteer_id', volunteerId)
+    if (delErr) { flash('Error updating tags: ' + delErr.message); return }
+    if (volTagDraft.length > 0) {
+      const { error: insErr } = await supabase
+        .from('volunteer_tags')
+        .insert(volTagDraft.map(tag => ({ volunteer_id: volunteerId, tag })))
+      if (insErr) { flash('Error saving tags: ' + insErr.message); return }
+    }
+    setVolunteers(prev => prev.map(v =>
+      v.id === volunteerId ? { ...v, skills: volTagDraft.join(',') } : v
+    ))
+    setEditingVolTags(null)
+    flash('Tags updated!')
   }
 
   // Update (or create) the event date for a regular panel
@@ -1933,20 +1959,38 @@ function SchedulingTab() {
             <div className="space-y-1.5 max-h-[70vh] overflow-y-auto pr-0.5">
               {filteredVols.map(v => {
                 const tags = (v.skills ?? '').split(',').filter(Boolean)
+                const isEditingTags = editingVolTags === v.id
                 return (
                   <div key={v.id}
-                    draggable
+                    draggable={!isEditingTags}
                     onDragStart={e => {
+                      if (isEditingTags) { e.preventDefault(); return }
                       e.dataTransfer.setData('volunteerId', String(v.id))
                       e.dataTransfer.effectAllowed = 'copy'
                     }}
-                    className="p-2.5 rounded-lg border border-gray-200 bg-white
-                               cursor-grab active:cursor-grabbing
-                               hover:border-brand-400 hover:shadow-sm
-                               transition-all select-none"
+                    className={`rounded-lg border bg-white transition-all select-none
+                      ${isEditingTags
+                        ? 'p-3 border-brand-400 shadow-md cursor-default'
+                        : 'p-2.5 border-gray-200 cursor-grab active:cursor-grabbing hover:border-brand-400 hover:shadow-sm'
+                      }`}
                   >
-                    <p className="text-sm font-semibold text-gray-900 truncate leading-tight">{v.name}</p>
-                    {tags.length > 0 && (
+                    <div className="flex items-start justify-between gap-1">
+                      <p className="text-sm font-semibold text-gray-900 truncate leading-tight flex-1">{v.name}</p>
+                      <button
+                        type="button"
+                        onClick={e => isEditingTags ? setEditingVolTags(null) : openVolTagEditor(v, e)}
+                        title={isEditingTags ? 'Cancel' : 'Edit tags'}
+                        className="flex-shrink-0 text-gray-400 hover:text-brand-600 transition-colors mt-0.5"
+                      >
+                        {isEditingTags
+                          ? <X size={13} />
+                          : <Tag size={12} />
+                        }
+                      </button>
+                    </div>
+
+                    {/* Normal view: show tag chips */}
+                    {!isEditingTags && tags.length > 0 && (
                       <div className="flex flex-wrap gap-1 mt-1">
                         {tags.slice(0, 2).map(t => (
                           <span key={t}
@@ -1955,6 +1999,43 @@ function SchedulingTab() {
                           </span>
                         ))}
                         {tags.length > 2 && <span className="text-xs text-gray-400">+{tags.length - 2}</span>}
+                      </div>
+                    )}
+                    {!isEditingTags && tags.length === 0 && (
+                      <p className="text-xs text-gray-400 mt-0.5">No tags — click <Tag size={10} className="inline" /> to add</p>
+                    )}
+
+                    {/* Inline tag editor */}
+                    {isEditingTags && (
+                      <div className="mt-2">
+                        <p className="text-xs text-gray-500 mb-1.5 font-medium">Toggle skill tags:</p>
+                        <div className="flex flex-wrap gap-1 mb-2">
+                          {Object.entries(ALL_SKILL_TAGS).map(([k, label]) => {
+                            const active = volTagDraft.includes(k)
+                            return (
+                              <button key={k} type="button"
+                                onClick={() => setVolTagDraft(d =>
+                                  active ? d.filter(t => t !== k) : [...d, k]
+                                )}
+                                className={`text-xs px-1.5 py-0.5 rounded-full leading-none border transition-colors
+                                  ${active
+                                    ? 'bg-brand-600 text-white border-brand-600'
+                                    : 'bg-white text-gray-600 border-gray-300 hover:border-brand-400'
+                                  }`}
+                              >
+                                {label.replace(/^\S+\s/, '')}
+                              </button>
+                            )
+                          })}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleSaveVolTags(v.id)}
+                          className="w-full text-xs py-1 rounded-md bg-brand-600 text-white font-semibold
+                                     hover:bg-brand-700 transition-colors"
+                        >
+                          Save Tags
+                        </button>
                       </div>
                     )}
                   </div>
