@@ -23,9 +23,16 @@ import { supabase } from '../lib/supabase'
 // ─── WEEK HELPERS ──────────────────────────────────────────────────────────────
 function getMondayISO(date) {
   const d = new Date(date)
+  // Anchor to local noon so that toISOString (UTC) never rolls over to the next
+  // calendar day when the user's UTC offset puts local evening past UTC midnight.
+  d.setHours(12, 0, 0, 0)
   const day = d.getDay() // 0 = Sun
   d.setDate(d.getDate() - (day === 0 ? 6 : day - 1))
-  return d.toISOString().split('T')[0]
+  // Format using local getters — never toISOString — to stay in the user's timezone.
+  const y  = d.getFullYear()
+  const mo = String(d.getMonth() + 1).padStart(2, '0')
+  const dy = String(d.getDate()).padStart(2, '0')
+  return `${y}-${mo}-${dy}`
 }
 
 function shiftDays(isoStr, n) {
