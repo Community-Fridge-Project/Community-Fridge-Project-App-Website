@@ -91,7 +91,7 @@ export const HOME = {
       {
         icon: '🙌',
         title: 'Volunteer',
-        description: 'Help stock fridges, prepare sack lunches, or drive donations between locations.',
+        description: 'Help stock & clean fridges, prepare sack lunches, food recovery or drive donations between locations.',
       },
       {
         icon: '🍱',
