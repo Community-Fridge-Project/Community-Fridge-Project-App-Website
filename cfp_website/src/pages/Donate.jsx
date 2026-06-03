@@ -11,7 +11,6 @@ const CANNOT_DONATE = [
   'Half-eaten leftovers',
   'Leftovers',
   'Any food in a broken or unsealed container or package',
-  'Any peanut products',
 ]
 
 const CAN_DONATE = [
