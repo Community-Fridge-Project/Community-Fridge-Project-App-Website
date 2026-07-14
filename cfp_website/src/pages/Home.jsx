@@ -39,7 +39,6 @@ export default function Home() {
                aria-labelledby="fridges-heading">
         <div className="section-container">
           <div className="text-center mb-8">
-            <span className="badge-green mb-4">Find a Fridge</span>
             <h2 id="fridges-heading" className="text-2xl md:text-3xl font-extrabold text-gray-900">
               Fridge Locations
             </h2>
@@ -83,7 +82,6 @@ export default function Home() {
         <section className="section-py bg-white" aria-labelledby="mission-heading">
           <div className="section-container">
             <div className="max-w-3xl mx-auto text-center">
-              <span className="badge-green mb-4">Our Mission</span>
               <h2 id="mission-heading" className="mb-6">{pages.missionTitle}</h2>
               <p className="text-lg text-gray-600 leading-relaxed">{pages.missionBody}</p>
             </div>
@@ -94,7 +92,6 @@ export default function Home() {
         <section className="section-py bg-neutral-50" aria-labelledby="how-heading">
           <div className="section-container">
             <div className="text-center mb-12">
-              <span className="badge-green mb-4">Simple &amp; Open</span>
               <h2 id="how-heading">{HOME.overview.title}</h2>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
