@@ -34,8 +34,40 @@ export default function Home() {
           </div>
         </div>
       </section>
-      {/* ── FRIDGE LOCATIONS ──────────────────────────────────────── */}
-      <section id="fridges" className="bg-neutral-50 border-b border-gray-200 py-10 md:py-14"
+
+      {/* ── REMAINING PAGE CONTENT WRAPPED WITH SIDEBAR ───────────── */}
+      <PageWithSidebar images={images.home}>
+
+        {/* ── MISSION STATEMENT ─────────────────────────────────── */}
+        <section className="bg-neutral-50 border-b border-gray-200 py-10 md:py-14" aria-labelledby="mission-heading">
+          <div className="section-container">
+            <div className="max-w-3xl mx-auto text-center">
+              <h2 id="mission-heading" className="mb-6">{pages.missionTitle}</h2>
+              <p className="text-lg text-gray-600 leading-relaxed">{pages.missionBody}</p>
+            </div>
+          </div>
+        </section>
+
+        {/* ── HOW IT WORKS ──────────────────────────────────────── */}
+        <section className="section-py bg-white" aria-labelledby="how-heading">
+          <div className="section-container">
+            <div className="text-center mb-12">
+              <h2 id="how-heading">{HOME.overview.title}</h2>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+              {HOME.overview.steps.map((step, i) => (
+                <div key={i} className="card text-center group hover:border-brand-200">
+                  <div className="text-5xl mb-4" role="img" aria-hidden="true">{step.icon}</div>
+                  <h3 className="text-xl font-bold mb-3 text-gray-900">{step.title}</h3>
+                  <p className="text-gray-600 text-sm leading-relaxed">{step.description}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ── FRIDGE LOCATIONS ──────────────────────────────────────── */}
+      <section id="fridges" className="section-py bg-neutral-50"
                aria-labelledby="fridges-heading">
         <div className="section-container">
           <div className="text-center mb-8">
@@ -75,37 +107,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── REMAINING PAGE CONTENT WRAPPED WITH SIDEBAR ───────────── */}
-      <PageWithSidebar images={images.home}>
-
-        {/* ── MISSION STATEMENT ─────────────────────────────────── */}
-        <section className="section-py bg-white" aria-labelledby="mission-heading">
-          <div className="section-container">
-            <div className="max-w-3xl mx-auto text-center">
-              <h2 id="mission-heading" className="mb-6">{pages.missionTitle}</h2>
-              <p className="text-lg text-gray-600 leading-relaxed">{pages.missionBody}</p>
-            </div>
-          </div>
-        </section>
-
-        {/* ── HOW IT WORKS ──────────────────────────────────────── */}
-        <section className="section-py bg-neutral-50" aria-labelledby="how-heading">
-          <div className="section-container">
-            <div className="text-center mb-12">
-              <h2 id="how-heading">{HOME.overview.title}</h2>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-              {HOME.overview.steps.map((step, i) => (
-                <div key={i} className="card text-center group hover:border-brand-200">
-                  <div className="text-5xl mb-4" role="img" aria-hidden="true">{step.icon}</div>
-                  <h3 className="text-xl font-bold mb-3 text-gray-900">{step.title}</h3>
-                  <p className="text-gray-600 text-sm leading-relaxed">{step.description}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
         {/* ── GET INVOLVED CTA ──────────────────────────────────── */}
         <section className="bg-brand-600 text-white section-py" aria-labelledby="cta-heading">
           <div className="section-container">
@@ -140,6 +141,8 @@ export default function Home() {
             </div>
           </div>
         </section>
+
+        
 
       </PageWithSidebar>
     </>
