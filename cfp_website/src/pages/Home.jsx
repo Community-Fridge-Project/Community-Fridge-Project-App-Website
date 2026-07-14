@@ -49,7 +49,7 @@ export default function Home() {
         </section>
 
         {/* ── HOW IT WORKS ──────────────────────────────────────── */}
-        <section className="section-py bg-white" aria-labelledby="how-heading">
+        <section className="section-py bg-white border-b border-gray-200 py-10 md:py-14" aria-labelledby="how-heading">
           <div className="section-container">
             <div className="text-center mb-12">
               <h2 id="how-heading">{HOME.overview.title}</h2>
@@ -67,7 +67,7 @@ export default function Home() {
         </section>
 
         {/* ── FRIDGE LOCATIONS ──────────────────────────────────────── */}
-      <section id="fridges" className="section-py bg-neutral-50"
+      <section id="fridges" className="section-py bg-neutral-50 border-b border-gray-200 py-10 md:py-14"
                aria-labelledby="fridges-heading">
         <div className="section-container">
           <div className="text-center mb-8">
