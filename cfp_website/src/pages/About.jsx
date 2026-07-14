@@ -12,9 +12,6 @@ export default function About() {
       {/* ── PAGE HEADER ─────────────────────────────────────────────── */}
       <section className="bg-gradient-to-br from-brand-600 to-brand-500 text-white py-20">
         <div className="section-container">
-          <span className="badge-green bg-white/20 text-white border border-white/30 mb-4 block w-fit">
-            Who We Are
-          </span>
           <h1 className="text-white mb-4">About Us</h1>
           <p className="text-brand-100 text-xl max-w-2xl">
             {pages.teamIntro}
@@ -28,7 +25,6 @@ export default function About() {
       <section className="section-py bg-white">
         <div className="section-container">
           <div className="max-w-3xl mx-auto">
-            <span className="badge-green mb-4">Our Story</span>
             <h2 className="mb-6">{pages.ourStoryTitle}</h2>
             <p className="text-lg text-gray-600 leading-relaxed mb-4">
               {pages.ourStoryBody1}
@@ -44,10 +40,8 @@ export default function About() {
       <section className="section-py bg-neutral-50" aria-labelledby="team-heading">
         <div className="section-container">
           <div className="text-center mb-12">
-            <span className="badge-green mb-4">The People</span>
             <h2 id="team-heading">{TEAM.headline}</h2>
           </div>
-
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto mb-12">
             {/* Founder card — CMS-editable */}
             <div className="card flex gap-5 items-start">
@@ -91,7 +85,6 @@ export default function About() {
       <section className="section-py bg-white" aria-labelledby="locations-heading">
         <div className="section-container">
           <div className="text-center mb-12">
-            <span className="badge-green mb-4">Find a Fridge</span>
             <h2 id="locations-heading">Our Fridge Network</h2>
             <p className="text-gray-500 mt-3 text-lg">
               {fridges.length} community fridge{fridges.length !== 1 ? 's' : ''} across Oak Park &amp; Austin Chicago — and growing.
@@ -139,7 +132,6 @@ export default function About() {
         <section className="section-py bg-white" aria-labelledby="partners-heading">
           <div className="section-container">
             <div className="text-center mb-8">
-              <span className="badge-green mb-4">Community Partners</span>
               <h2 id="partners-heading">Thank You to Our Partners</h2>
               <p className="text-gray-500 mt-3 text-lg max-w-2xl mx-auto">
                 These local organizations help make our work possible.
