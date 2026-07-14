@@ -28,9 +28,6 @@ export default function Home() {
               <span className="text-white/70 text-sm font-medium block mb-1">
                 Oak Park, IL &amp; Austin Chicago · Free for Everyone
               </span>
-              <p className="text-white text-lg font-semibold hidden md:block">
-                {pages.heroSub}
-              </p>
             </div>
             <div className="flex flex-wrap gap-3">
               <Link to={HOME.hero.ctaPath}
