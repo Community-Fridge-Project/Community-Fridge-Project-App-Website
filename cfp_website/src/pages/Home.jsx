@@ -23,16 +23,12 @@ export default function Home() {
 
         {/* CTA strip below banner */}
         <div className="bg-brand-600 py-6">
-          <div className="section-container flex flex-wrap items-center justify-between gap-4">
+          <div className="section-container flex flex-wrap items-center justify-center gap-4">
             <div className="flex flex-wrap gap-3">
               <Link to={HOME.hero.ctaPath}
                 className="btn-primary bg-white text-brand-600 hover:bg-brand-50 shadow-lg px-7 py-3">
                 {HOME.hero.ctaLabel}
                 <ArrowRight size={17} />
-              </Link>
-              <Link to="/donate"
-                className="btn-secondary border-white text-white hover:bg-white/10 px-7 py-3">
-                Donate Food
               </Link>
             </div>
           </div>
