@@ -24,11 +24,6 @@ export default function Home() {
         {/* CTA strip below banner */}
         <div className="bg-brand-600 py-6">
           <div className="section-container flex flex-wrap items-center justify-between gap-4">
-            <div>
-              <span className="text-white/70 text-sm font-medium block mb-1">
-                Oak Park, IL &amp; Austin Chicago · Free for Everyone
-              </span>
-            </div>
             <div className="flex flex-wrap gap-3">
               <Link to={HOME.hero.ctaPath}
                 className="btn-primary bg-white text-brand-600 hover:bg-brand-50 shadow-lg px-7 py-3">
