@@ -44,14 +44,15 @@ export default function Footer() {
               {BRAND.tagline}. Neighbors feeding neighbors across Oak Park, IL
               and the Austin neighborhood of Chicago.
               Free food, always available, no questions asked.
+              <br />
             </p>
-            <p className="hover:text-white underline underline-offset-2 transition-colors">
-  
+            <p className="text-gray-400 text-sm leading-relaxed max-w-xs mt-3">
+              <a
                 href="https://www.communityofcongregations.org"
                 target="_blank"
                 rel="noopener noreferrer"
+                className="hover:text-white underline underline-offset-2 transition-colors"
               >
-                <br />
                 A Project of Community of Congregations
                 <br />
                 Oak Park · River Forest · 501(c)(3) Nonprofit
