@@ -11,7 +11,7 @@ export default function About() {
     <>
       {/* ── PAGE HEADER ─────────────────────────────────────────────── */}
       <section className="bg-gradient-to-br from-brand-600 to-brand-500 text-white py-20">
-        <div className="section-container">
+        <div className="section-container text-center">
           <h1 className="text-white mb-4">About Us</h1>
           <p className="text-brand-100 text-xl max-w-2xl">
             {pages.teamIntro}
@@ -23,7 +23,7 @@ export default function About() {
 
       {/* ── OUR STORY ───────────────────────────────────────────────── */}
       <section className="section-py bg-white">
-        <div className="section-container">
+        <div className="section-container text-center">
           <div className="max-w-3xl mx-auto">
             <h2 className="mb-6">{pages.ourStoryTitle}</h2>
             <p className="text-lg text-gray-600 leading-relaxed mb-4">
