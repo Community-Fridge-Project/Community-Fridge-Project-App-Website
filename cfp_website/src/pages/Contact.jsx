@@ -37,9 +37,6 @@ export default function Contact() {
       {/* ── PAGE HEADER ─────────────────────────────────────────────── */}
       <section className="bg-gradient-to-br from-brand-600 to-brand-500 text-white py-20">
         <div className="section-container">
-          <span className="badge-green bg-white/20 text-white border border-white/30 mb-4 block w-fit">
-            Reach Out
-          </span>
           <h1 className="text-white mb-4">{pages.contactHeadline}</h1>
           <p className="text-brand-100 text-xl max-w-2xl">
             {pages.contactIntro}
