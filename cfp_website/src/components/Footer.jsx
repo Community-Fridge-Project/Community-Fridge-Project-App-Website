@@ -45,14 +45,17 @@ export default function Footer() {
               and the Austin neighborhood of Chicago.
               Free food, always available, no questions asked.
             </p>
-            <p className="text-gray-400 text-sm leading-relaxed max-w-xs">
-              <a
-                href={"https://www.communityofcongregations.org"}
+            <p className="hover:text-white underline underline-offset-2 transition-colors">
+  
+                href="https://www.communityofcongregations.org"
+                target="_blank"
+                rel="noopener noreferrer"
               >
                 <br />
                 A Project of Community of Congregations
                 <br />
                 Oak Park · River Forest · 501(c)(3) Nonprofit
+              </a>
             </p>
             {email && (
               <a
