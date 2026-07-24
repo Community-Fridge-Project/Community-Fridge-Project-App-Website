@@ -114,7 +114,7 @@ export default function Header() {
             ))}
             <div className="pt-2 px-4">
             <a             
-              href="https://your-donation-link.com"
+              href="https://www.paypal.com/donate/?hosted_button_id=LK3CRNSRVGCBL"
               target="_blank"
               rel="noopener noreferrer"
               onClick={closeMobile}
