@@ -8,17 +8,16 @@ const CANNOT_DONATE = [
   'Alcohol',
   'Raw milk cheeses',
   'Unlabeled multi-ingredient items',
-  'Half-eaten leftovers',
   'Leftovers',
   'Any food in a broken or unsealed container or package',
 ]
 
 const CAN_DONATE = [
   'Sealed packaged food',
-  'Cheeses',
+  'Cheese, milk, and eggs',
   'Fresh fruit',
   'Fresh vegetables',
-  'Table sauces',
+  'Condiments',
   'Pastries',
   'Bread',
 ]
@@ -66,19 +65,18 @@ export default function Donate() {
                 </a>
               </div>
               <p className="text-brand-800 font-bold text-lg mb-2">
-                Donate Financially Through the Community of Congregations
+                Donate Financially through the Community of Congregations
               </p>
               <p className="text-gray-500 text-sm mb-6">
                 Community of Congregations is a 501(c)(3) nonprofit organization.
                 Your donation is tax-deductible.
               </p>
               <a
-                href="https://www.communityofcongregations.org/give/"
+                href="https://www.paypal.com/donate/?hosted_button_id=LK3CRNSRVGCBL"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="btn-primary text-base px-8 py-3 inline-flex items-center gap-2"
               >
-                <Heart size={18} />
                 Donate Now
               </a>
             </div>
