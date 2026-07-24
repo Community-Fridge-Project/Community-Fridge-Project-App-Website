@@ -74,9 +74,14 @@ export default function Header() {
                 {link.label}
               </NavLink>
             ))}
-            <Link to="/volunteer" className="ml-3 btn-primary text-sm px-5 py-2">
-              Volunteer 🖐️
-            </Link>
+            <a
+              href="https://www.paypal.com/donate/?hosted_button_id=LK3CRNSRVGCBL"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="ml-3 btn-primary text-sm px-5 py-2"
+            >
+              Donate
+            </a>
           </nav>
 
           {/* ─── MOBILE TOGGLE ────────────────────────────────── */}
