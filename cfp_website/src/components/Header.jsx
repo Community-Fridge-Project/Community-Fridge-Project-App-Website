@@ -113,9 +113,15 @@ export default function Header() {
               </NavLink>
             ))}
             <div className="pt-2 px-4">
-              <Link to="/volunteer" onClick={closeMobile} className="btn-primary w-full text-center">
-                Volunteer 🖐️
-              </Link>
+            <a             
+              href="https://your-donation-link.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={closeMobile}
+              className="btn-primary w-full text-center block"
+            >
+              Donate
+            </a>
             </div>
           </nav>
         )}
