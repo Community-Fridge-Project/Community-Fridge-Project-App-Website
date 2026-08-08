@@ -56,7 +56,7 @@ export default function Header() {
           >
             <div className="h-14 flex items-center justify-center flex-shrink-0">
               <img
-                src="/images/community-fridge-project-logo.png"
+                src="/images/community-fridge-project-logo-no-text.png"
                 alt=""
                 className="h-full w-auto object-contain"
               />
