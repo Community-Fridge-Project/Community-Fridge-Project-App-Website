@@ -57,7 +57,7 @@ export default function Header() {
             <div className="w-11 h-11 bg-brand-500 rounded-xl flex items-center justify-center
                             group-hover:bg-brand-600 transition-colors duration-200 flex-shrink-0
                             shadow-sm overflow-hidden">
-              <FridgeIcon size={36} />
+              <img src= "/images/Community Fridge Project Logo.png" alt="" className="w-full h-full object-cover" />
             </div>
             <div className="leading-none">
               <span className="block text-brand-600 font-extrabold text-lg md:text-xl tracking-tight">
