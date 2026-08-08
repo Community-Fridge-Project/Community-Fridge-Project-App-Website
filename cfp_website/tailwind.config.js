@@ -16,7 +16,7 @@ export default {
           300: '#7dd37d',
           400: '#4dba4d',
           500: '#3BAA35',   // ← Primary green (sampled from community fridge whiteboard)
-          600: '#2d8a28',
+          600: '#087a38',
           700: '#246e20',
           800: '#1e571b',
           900: '#174517',
