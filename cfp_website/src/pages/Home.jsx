@@ -130,13 +130,17 @@ export default function Home() {
                   <Heart size={32} className="text-brand-500" />
                   <span>Donate Food</span>
                 </Link>
-                <Link to="/donate"
+                <a
+                  href="https://www.paypal.com/donate/?hosted_button_id=LK3CRNSRVGCBL"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="bg-white text-brand-600 hover:bg-brand-50 rounded-xl p-6
-                             font-bold text-center transition-all duration-200 hover:shadow-lg
-                             flex flex-col items-center gap-3">
-                  <DollarSign size={32} className="text-brand-500" />
-                  <span>Give Financially</span>
-                </Link>
+                  font-bold text-center transition-all duration-200 hover:shadow-lg
+                   flex flex-col items-center gap-3"
+                    >
+                    <DollarSign size={32} className="text-brand-500" />
+                    <span>Give Financially</span>
+                </a>
               </div>
             </div>
           </div>
