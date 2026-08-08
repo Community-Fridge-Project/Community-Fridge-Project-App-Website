@@ -54,10 +54,10 @@ export default function Header() {
             className="flex items-center gap-3 group"
             aria-label={`${BRAND.name} — Home`}
           >
-            <div className="w-11 h-11 bg-brand-500 rounded-xl flex items-center justify-center
+            <div className="h-11 bg-brand-500 rounded-xl flex items-center justify-center
                             group-hover:bg-brand-600 transition-colors duration-200 flex-shrink-0
                             shadow-sm overflow-hidden">
-              <img src= "/images/Community Fridge Project Logo.png" alt="" className="w-full h-full object-cover" />
+              <img src= "/images/community-fridge-project-logo.png" alt="" className="h-full w-auto object-contain" />
             </div>
             <div className="leading-none">
               <span className="block text-brand-600 font-extrabold text-lg md:text-xl tracking-tight">
