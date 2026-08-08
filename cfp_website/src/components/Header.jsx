@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, NavLink } from 'react-router-dom'
 import { Menu, X } from 'lucide-react'
-import { BRAND, NAV_LINKS } from '../config/site.config'
+import { BRAND } from '../config/site.config'
 
 // ─── FRIDGE ICON LOGO ─────────────────────────────────────────────────────────
 function FridgeIcon({ size = 36 }) {
@@ -29,6 +29,18 @@ function FridgeIcon({ size = 36 }) {
 export default function Header() {
   const [mobileOpen, setMobileOpen] = useState(false)
   const closeMobile = () => setMobileOpen(false)
+
+  const navLinkClass = ({ isActive }) =>
+    `px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${
+      isActive
+        ? 'bg-brand-100 text-brand-700'
+        : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+    }`
+
+  const mobileNavLinkClass = ({ isActive }) =>
+    `block px-4 py-3 rounded-lg text-base font-semibold transition-all duration-200 ${
+      isActive ? 'bg-brand-100 text-brand-700' : 'text-gray-700 hover:bg-gray-100'
+    }`
 
   return (
     <header className="sticky top-0 z-50 bg-white border-b-2 border-brand-500 shadow-sm">
@@ -59,21 +71,11 @@ export default function Header() {
 
           {/* ─── DESKTOP NAV ──────────────────────────────────── */}
           <nav className="hidden md:flex items-center gap-1" aria-label="Main navigation">
-            {NAV_LINKS.map((link) => (
-              <NavLink
-                key={link.path}
-                to={link.path}
-                className={({ isActive }) =>
-                  `px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${
-                    isActive
-                      ? 'bg-brand-100 text-brand-700'
-                      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-                  }`
-                }
-              >
-                {link.label}
-              </NavLink>
-            ))}
+            <NavLink to="/" className={navLinkClass}>Home</NavLink>
+            <NavLink to="/about" className={navLinkClass}>About Us</NavLink>
+            <NavLink to="/volunteer" className={navLinkClass}>Volunteer</NavLink>
+            <NavLink to="/donate" className={navLinkClass}>Support</NavLink>
+            <NavLink to="/contact" className={navLinkClass}>Contact</NavLink>
             <a
               href="https://www.paypal.com/donate/?hosted_button_id=LK3CRNSRVGCBL"
               target="_blank"
@@ -98,20 +100,11 @@ export default function Header() {
         {/* ─── MOBILE NAV ───────────────────────────────────── */}
         {mobileOpen && (
           <nav className="md:hidden border-t border-gray-100 py-4 space-y-1" aria-label="Mobile navigation">
-            {NAV_LINKS.map((link) => (
-              <NavLink
-                key={link.path}
-                to={link.path}
-                onClick={closeMobile}
-                className={({ isActive }) =>
-                  `block px-4 py-3 rounded-lg text-base font-semibold transition-all duration-200 ${
-                    isActive ? 'bg-brand-100 text-brand-700' : 'text-gray-700 hover:bg-gray-100'
-                  }`
-                }
-              >
-                {link.label}
-              </NavLink>
-            ))}
+            <NavLink to="/" onClick={closeMobile} className={mobileNavLinkClass}>Home</NavLink>
+            <NavLink to="/about" onClick={closeMobile} className={mobileNavLinkClass}>About Us</NavLink>
+            <NavLink to="/volunteer" onClick={closeMobile} className={mobileNavLinkClass}>Volunteer</NavLink>
+            <NavLink to="/donate" onClick={closeMobile} className={mobileNavLinkClass}>Support</NavLink>
+            <NavLink to="/contact" onClick={closeMobile} className={mobileNavLinkClass}>Contact</NavLink>
             <div className="pt-2 px-4">
             <a             
               href="https://www.paypal.com/donate/?hosted_button_id=LK3CRNSRVGCBL"
