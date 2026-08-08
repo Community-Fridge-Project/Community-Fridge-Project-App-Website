@@ -38,7 +38,7 @@
   /* Primary CTA button */
   .btn-primary {
     @apply inline-flex items-center justify-center gap-2
-           bg-brand-500 hover:bg-brand-600 active:bg-brand-700
+           bg-brand-600 hover:bg-brand-700 active:bg-brand-700
            text-white font-semibold text-base
            px-6 py-3 rounded-lg
            shadow-sm hover:shadow-card
