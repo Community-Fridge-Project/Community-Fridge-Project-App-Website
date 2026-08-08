@@ -266,7 +266,7 @@ export const TEAM = {
     title: 'How It Started',
     body1: `The Community Fridge Project began with a simple belief: no one in our community should go
       hungry when food is available. What started as a single refrigerator on a neighborhood corner
-      has grown into a network of five community fridges serving both Oak Park, IL and the Austin
+      has grown into a network of community fridges serving both Oak Park, IL and the Austin
       neighborhood of Chicago.`,
     body2: `We operate on the principles of mutual aid — neighbors helping neighbors, with no
       hierarchy, no gatekeeping, and no judgment. Our fridges are open to everyone,
@@ -329,7 +329,7 @@ export const DONATE = {
     'Prepared meals (sealed and labeled with date)',
     'Baby food and formula',
   ],
-  dropoffNote: 'Drop off at any of our 5 fridge locations in Oak Park, IL or Austin Chicago — no appointment needed.',
+  dropoffNote: 'Drop off at any of our fridge locations in Oak Park, IL or Austin Chicago — no appointment needed.',
   paymentLink: 'https://www.paypal.com/donate?token=euPabnhIunjsHTQN3OEVT9Ju3Y8R9a983s_JNk1Kh5fIXsM-ztDIFpoKJh3dPRkLJKwwsHSMZiLbDJg-&fbclid=IwT01FWARMxgdleHRuA2FlbQIxMABzcnRjBmFwcF9pZAwzNTA2ODU1MzE3MjgAAR62gFMaufPNay1eusdHdHVkN6q0WX3xE8hWTPreyVn09cExNDZBKl2pI3zceg_aem_jePk0i92M0YAXVPDXRiWDw',
 }
 
