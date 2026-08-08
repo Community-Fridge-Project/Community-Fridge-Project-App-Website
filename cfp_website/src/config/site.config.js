@@ -164,6 +164,7 @@ export const COMMUNITY_PARTNERS = [
   'Catholic Communities of Oak Park',
   'Dark Matter Coffee',
   'District 97',
+  'Forty Acres Fresh Market',
   'Happy Apple Pie Shop',
   'Mint Dental',
   'Publican Quality Bread Oak Park',
