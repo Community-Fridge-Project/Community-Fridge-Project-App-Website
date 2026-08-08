@@ -61,7 +61,7 @@ export default function Header() {
             </div>
             <div className="leading-none">
               <span className="block text-brand-600 font-extrabold text-lg md:text-xl tracking-tight">
-                Community
+                The Community
               </span>
               <span className="block text-gray-800 font-extrabold text-lg md:text-xl tracking-tight -mt-0.5">
                 Fridge Project
