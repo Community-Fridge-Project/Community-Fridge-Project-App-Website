@@ -74,7 +74,7 @@ export default function Header() {
             <NavLink to="/" className={navLinkClass}>Home</NavLink>
             <NavLink to="/about" className={navLinkClass}>About Us</NavLink>
             <NavLink to="/volunteer" className={navLinkClass}>Volunteer</NavLink>
-            <NavLink to="/donate" className={navLinkClass}>Support</NavLink>
+            <NavLink to="/donate" className={navLinkClass}>Support Us</NavLink>
             <NavLink to="/contact" className={navLinkClass}>Contact</NavLink>
             <a
               href="https://www.paypal.com/donate/?hosted_button_id=LK3CRNSRVGCBL"
@@ -103,7 +103,7 @@ export default function Header() {
             <NavLink to="/" onClick={closeMobile} className={mobileNavLinkClass}>Home</NavLink>
             <NavLink to="/about" onClick={closeMobile} className={mobileNavLinkClass}>About Us</NavLink>
             <NavLink to="/volunteer" onClick={closeMobile} className={mobileNavLinkClass}>Volunteer</NavLink>
-            <NavLink to="/donate" onClick={closeMobile} className={mobileNavLinkClass}>Support</NavLink>
+            <NavLink to="/donate" onClick={closeMobile} className={mobileNavLinkClass}>Support Us</NavLink>
             <NavLink to="/contact" onClick={closeMobile} className={mobileNavLinkClass}>Contact</NavLink>
             <div className="pt-2 px-4">
             <a             
